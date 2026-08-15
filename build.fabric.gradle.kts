@@ -30,6 +30,7 @@ val requiredJava: JavaVersion = when {
 }
 
 java {
+    withJavadocJar()
     withSourcesJar()
     targetCompatibility = requiredJava
     sourceCompatibility = requiredJava
@@ -123,6 +124,18 @@ tasks {
         from(rootProject.file("LICENSE.md")) { into("") }
 
         exclude("META-INF/neoforge.mods.toml")
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            named<MavenPublication>("mavenJava") {
+                artifact(distributionJar) {
+                    classifier = ""
+                }
+            }
+        }
     }
 }
 

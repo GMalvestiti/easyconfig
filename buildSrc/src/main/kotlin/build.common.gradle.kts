@@ -1,13 +1,12 @@
-import com.vanniktech.maven.publish.Checksum
-import com.vanniktech.maven.publish.JavadocJar
 import me.modmuss50.mpp.ReleaseType
 
 plugins {
     java
     idea
     jacoco
+    `maven-publish`
+    signing
     id("com.gradleup.shadow")
-    id("com.vanniktech.maven.publish")
     id("me.modmuss50.mod-publish-plugin")
 }
 
@@ -185,53 +184,74 @@ tasks {
 }
 
 afterEvaluate {
-    mavenPublishing {
-        publishToMavenCentral(automaticRelease = true)
-        signAllPublications()
+    publishing {
+        publications {
+            create<MavenPublication>("mavenJava") {
 
-        coordinates(
-            prop("mod.group"),
-            project.base.archivesName.get(),
-            project.version.toString()
-        )
+                groupId = prop("mod.group")
+                artifactId = project.base.archivesName.get()
+                version = project.version.toString()
 
-        if (!prop("dev.javadoc").toBoolean()) {
-            configureBasedOnAppliedPlugins(
-                javadocJar = JavadocJar.Empty()
-            )
-        }
+                artifact(tasks.named("sourcesJar")) {
+                    classifier = "sources"
+                }
 
-        pom {
-            name.set(prop("mod.name"))
-            description.set(prop("mod.description"))
-            inceptionYear.set("2026")
-            url.set(prop("mod.contact_sources"))
+                if (prop("dev.javadoc").toBoolean()) {
+                    artifact(tasks.named("javadocJar")) {
+                        classifier = "javadoc"
+                    }
+                }
 
-            licenses {
-                license {
-                    name.set(prop("mod.license"))
-                    url.set("${prop("mod.contact_sources")}/blob/main/LICENSE")
-                    distribution.set("${prop("mod.contact_sources")}/blob/main/LICENSE")
+                pom {
+                    name.set(prop("mod.name"))
+                    description.set(prop("mod.description"))
+                    inceptionYear.set("2026")
+                    url.set(prop("mod.contact_sources"))
+
+                    licenses {
+                        license {
+                            name.set(prop("mod.license"))
+                            url.set("${prop("mod.contact_sources")}/blob/main/LICENSE")
+                            distribution.set("${prop("mod.contact_sources")}/blob/main/LICENSE")
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            id.set(prop("mod.author"))
+                            name.set(prop("mod.author"))
+                            url.set("https://github.com/${prop("mod.author")}")
+                        }
+                    }
+
+                    scm {
+                        url.set(prop("mod.contact_sources"))
+                        connection.set("scm:git:git://github.com/${prop("mod.author")}/${prop("mod.id")}.git")
+                        developerConnection.set("scm:git:ssh://git@github.com/${prop("mod.author")}/${prop("mod.id")}.git")
+                    }
                 }
             }
-
-            developers {
-                developer {
-                    id.set(prop("mod.author"))
-                    name.set(prop("mod.author"))
-                    url.set("https://github.com/${prop("mod.author")}")
-                }
-            }
-
-            scm {
-                url.set(prop("mod.contact_sources"))
-                connection.set("scm:git:git://github.com/${prop("mod.author")}/${prop("mod.id")}.git")
-                developerConnection.set("scm:git:ssh://git@github.com/${prop("mod.author")}/${prop("mod.id")}.git")
-            }
         }
 
-        checksums(Checksum.MD5, Checksum.SHA1, Checksum.SHA256, Checksum.SHA512)
-        excludeSignatureChecksums(false)
+        repositories {
+            maven {
+                name = "MavenCentral"
+
+                val releasesRepoUrl = "https://central.sonatype.com"
+                val snapshotsRepoUrl = "https://central.sonatype.com/repository/maven-snapshots"
+
+                url = uri(if (prop("dev.snapshot").toBoolean()) snapshotsRepoUrl else releasesRepoUrl)
+
+                credentials {
+                    username = project.findProperty("mavenCentralUsername")?.toString()
+                    password = project.findProperty("mavenCentralPassword")?.toString()
+                }
+            }
+        }
+    }
+
+    signing {
+        sign(publishing.publications["mavenJava"])
     }
 
     publishMods {

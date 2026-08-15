@@ -47,7 +47,7 @@ tasks {
         if (isDryRun) {
             dependsOn(stonecutter.tasks.named("publishToMavenLocal"))
         } else {
-            dependsOn(stonecutter.tasks.named("publishToMavenCentral"))
+            dependsOn(stonecutter.tasks.named("publishAllPublicationsToOSSRHRepository"))
         }
     }
 

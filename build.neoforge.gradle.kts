@@ -29,6 +29,7 @@ val requiredJava = when {
 }
 
 java {
+    withJavadocJar()
     withSourcesJar()
     targetCompatibility = requiredJava
     sourceCompatibility = requiredJava
@@ -126,6 +127,18 @@ tasks {
 
     named("createMinecraftArtifacts") {
         dependsOn("stonecutterGenerate")
+    }
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            named<MavenPublication>("mavenJava") {
+                artifact(distributionJar) {
+                    classifier = ""
+                }
+            }
+        }
     }
 }
 
