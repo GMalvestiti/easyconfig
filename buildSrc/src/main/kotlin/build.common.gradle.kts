@@ -136,9 +136,8 @@ tasks {
 
         configurations = listOf(project.configurations.shadow.get())
 
-        relocate("com.github.benmanes.caffeine", "${shadowGroup}.caffeine")
-        relocate("com.google.errorprone", "${shadowGroup}.errorprone")
-        relocate("org.jspecify", "${shadowGroup}.jspecify")
+        relocate("de.marhali.json5", "${shadowGroup}.json5")
+        relocate("com.electronwill.nightconfig", "${shadowGroup}.nightconfig")
 
         mergeServiceFiles()
         addMultiReleaseAttribute.set(false)
