@@ -109,7 +109,7 @@ class ConfigBuilderTest {
                 .onChange(state -> seen.add(state.value))
                 .create();
 
-        Files.writeString(tempDir.resolve("simple.json"), "{ not a config");
+        Files.writeString(tempDir.resolve("simple.json5"), "{ not a config");
         holder.load();
 
         assertTrue(seen.isEmpty(), "a swallowed failure is not a change worth announcing");

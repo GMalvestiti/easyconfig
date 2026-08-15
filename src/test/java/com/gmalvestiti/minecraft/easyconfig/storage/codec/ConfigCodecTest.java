@@ -24,7 +24,7 @@ class ConfigCodecTest {
         ConfigStorage storage = TestFixtures.storage(tempDir);
 
         storage.write(TestFixtures.EntryConfig.class, new TestFixtures.EntryConfig());
-        String written = Files.readString(tempDir.resolve("entries.json"));
+        String written = Files.readString(tempDir.resolve("entries.json5"));
         assertTrue(written.contains("hud_scale"), "@ConfigEntry(name) renames the property on disk");
         assertTrue(written.contains("Scale of the HUD overlay."));
         assertTrue(written.contains("Settings for the entry fixture."));
@@ -96,7 +96,7 @@ class ConfigCodecTest {
         ConfigStorage storage = TestFixtures.storage(tempDir);
 
         storage.write(TestFixtures.AwkwardCommentConfig.class, new TestFixtures.AwkwardCommentConfig());
-        String written = Files.readString(tempDir.resolve("awkward-comments.json"));
+        String written = Files.readString(tempDir.resolve("awkward-comments.json5"));
 
         assertTrue(written.contains("/*"), "several lines share one block comment");
         assertTrue(written.contains(" * Two lines,"));
@@ -130,6 +130,40 @@ class ConfigCodecTest {
         assertTrue(text.contains("#so this renders as a block."));
         assertFalse(text.contains("/*"), "TOML has no block comment to escape into");
         assertEquals(42, Objects.requireNonNull(storage.read(TestFixtures.AwkwardCommentTomlConfig.class)).value);
+    }
+
+    @Test
+    void testExcludesFieldsAnnotatedWithConfigIgnore(@TempDir Path tempDir) throws IOException {
+        ConfigStorage storage = TestFixtures.storage(tempDir);
+
+        storage.write(TestFixtures.IgnoredFieldConfig.class, new TestFixtures.IgnoredFieldConfig());
+        String written = Files.readString(tempDir.resolve("ignored-field.json5"));
+
+        assertTrue(written.contains("persisted"), "non-ignored fields must be written");
+        assertFalse(written.contains("ignored"), "@ConfigIgnore fields must not appear in the file");
+    }
+
+    @Test
+    void testDoesNotRestoreIgnoredFieldValueFromFile(@TempDir Path tempDir) throws IOException {
+        ConfigStorage storage = TestFixtures.storage(tempDir);
+
+        Files.writeString(tempDir.resolve("ignored-field.json5"), "{\"persisted\":7,\"ignored\":42}");
+
+        TestFixtures.IgnoredFieldConfig loaded = storage.read(TestFixtures.IgnoredFieldConfig.class);
+
+        assertEquals(7, loaded.persisted);
+        assertEquals(99, loaded.ignored, "@ConfigIgnore fields keep their constructor default after load");
+    }
+
+    @Test
+    void testIgnoresCommentWhenConfigIgnoreAndConfigEntryAreCombined(@TempDir Path tempDir) throws IOException {
+        ConfigStorage storage = TestFixtures.storage(tempDir);
+
+        storage.write(TestFixtures.IgnoredWithEntryConfig.class, new TestFixtures.IgnoredWithEntryConfig());
+        String written = Files.readString(tempDir.resolve("ignored-with-entry.json5"));
+
+        assertFalse(written.contains("ignored"), "@ConfigIgnore must exclude the field even when @ConfigEntry is also present");
+        assertFalse(written.contains("This comment must never reach the file."), "@ConfigEntry comment must not be written for an ignored field");
     }
 }
 

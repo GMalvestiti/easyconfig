@@ -72,24 +72,24 @@ class AbstractConfigHolderTest {
 
         holder(tempDir, scope, HolderImplementation.SIMPLE);
 
-        assertTrue(Files.readString(tempDir.resolve("with-extension.json")).contains("\"value\": 1"));
+        assertTrue(Files.readString(tempDir.resolve("with-extension.json5")).contains("\"value\": 1"));
     }
 
     @Test
     void testAdoptsAnExistingValidFileDuringInitialization(@TempDir Path tempDir) throws Exception {
-        Files.writeString(tempDir.resolve("with-extension.json"), "{\"value\":7}");
+        Files.writeString(tempDir.resolve("with-extension.json5"), "{\"value\":7}");
         ConfigScope scope = spy(new ConfigScope("mod"));
 
         ConfigHolder<TestFixtures.ConfigWithExtension> holder = holder(tempDir, scope, HolderImplementation.SIMPLE);
 
         assertEquals(7, holder.data().value, "a valid file must seed the holder without calling load()");
-        assertTrue(Files.readString(tempDir.resolve("with-extension.json")).contains("\"value\": 7"),
+        assertTrue(Files.readString(tempDir.resolve("with-extension.json5")).contains("\"value\": 7"),
             "adopted values must survive the write-back");
     }
 
     @Test
     void testBacksUpAnInvalidFileAndPersistsDefaultsDuringInitialization(@TempDir Path tempDir) throws Exception {
-        Path file = tempDir.resolve("with-extension.json");
+        Path file = tempDir.resolve("with-extension.json5");
         Files.writeString(file, "{\"value\":-5}");
         ConfigScope scope = spy(new ConfigScope("mod"));
 
@@ -109,14 +109,14 @@ class AbstractConfigHolderTest {
             .baseDir(tempDir.toString())
             .create();
 
-        assertTrue(Files.readString(tempDir.resolve("member-a.json")).contains("\"value\": 10"));
-        assertTrue(Files.readString(tempDir.resolve("member-b.json")).contains("\"value\": 20"));
+        assertTrue(Files.readString(tempDir.resolve("member-a.json5")).contains("\"value\": 10"));
+        assertTrue(Files.readString(tempDir.resolve("member-b.json5")).contains("\"value\": 20"));
     }
 
     @Test
     void testBacksUpOnlyTheMalformedGroupMemberAndPersistsItsDefaults(@TempDir Path tempDir) throws Exception {
-        Files.writeString(tempDir.resolve("member-a.json"), "{");
-        Files.writeString(tempDir.resolve("member-b.json"), "{\"value\":42}");
+        Files.writeString(tempDir.resolve("member-a.json5"), "{");
+        Files.writeString(tempDir.resolve("member-b.json5"), "{\"value\":42}");
 
         ConfigHolder<TestFixtures.GroupConfig> holder = EasyConfig.holder(TestFixtures.GroupConfig.class)
             .modId("mod")
@@ -125,7 +125,7 @@ class AbstractConfigHolderTest {
 
         assertEquals(10, holder.data().memberA.value, "the malformed member falls back to its defaults");
         assertEquals(42, holder.data().memberB.value, "a healthy sibling keeps its persisted values");
-        assertTrue(Files.readString(tempDir.resolve("member-a.json")).contains("\"value\": 10"));
+        assertTrue(Files.readString(tempDir.resolve("member-a.json5")).contains("\"value\": 10"));
         try (var entries = Files.list(tempDir)) {
             assertEquals(1, entries.filter(p -> p.getFileName().toString().contains(".corrupt-")).count());
         }
@@ -150,7 +150,7 @@ class AbstractConfigHolderTest {
 
     @Test
     void testBacksUpTheGroupMemberFilesWhenTheAssembledGroupFailsValidation(@TempDir Path tempDir) throws Exception {
-        Files.writeString(tempDir.resolve("extended-member.json"), "{\"value\":3}");
+        Files.writeString(tempDir.resolve("extended-member.json5"), "{\"value\":3}");
         ConfigScope scope = spy(new ConfigScope("mod"));
 
         ConfigSettings<TestFixtures.PlainGroupWithExtendedMemberConfig> settings = new ConfigSettings<>(
@@ -167,7 +167,7 @@ class AbstractConfigHolderTest {
         ConfigHolder<TestFixtures.PlainGroupWithExtendedMemberConfig> holder = HolderFactory.create(settings);
 
         assertEquals(2, holder.data().member.value, "a member that breaks a rule falls back to defaults");
-        assertTrue(Files.readString(tempDir.resolve("extended-member.json")).contains("\"value\": 2"));
+        assertTrue(Files.readString(tempDir.resolve("extended-member.json5")).contains("\"value\": 2"));
         try (var entries = Files.list(tempDir)) {
             assertEquals(
                 1,
@@ -186,7 +186,7 @@ class AbstractConfigHolderTest {
         assertTrue(holder.reset().accepted());
 
         assertEquals(1, holder.data().value);
-        assertTrue(Files.readString(tempDir.resolve("with-extension.json")).contains("\"value\": 42"),
+        assertTrue(Files.readString(tempDir.resolve("with-extension.json5")).contains("\"value\": 42"),
             "reset alone must not write");
     }
 
@@ -199,7 +199,7 @@ class AbstractConfigHolderTest {
         assertTrue(holder.resetAndSave().accepted());
 
         assertEquals(1, holder.data().value);
-        assertTrue(Files.readString(tempDir.resolve("with-extension.json")).contains("\"value\": 1"));
+        assertTrue(Files.readString(tempDir.resolve("with-extension.json5")).contains("\"value\": 1"));
     }
 
     @Test
@@ -211,7 +211,7 @@ class AbstractConfigHolderTest {
         assertTrue(holder.resetAndSaveAsync().join().accepted());
 
         assertEquals(1, holder.data().value);
-        assertTrue(Files.readString(tempDir.resolve("with-extension.json")).contains("\"value\": 1"));
+        assertTrue(Files.readString(tempDir.resolve("with-extension.json5")).contains("\"value\": 1"));
     }
 
     private static ConfigHolder<TestFixtures.ConfigWithExtension> holder(

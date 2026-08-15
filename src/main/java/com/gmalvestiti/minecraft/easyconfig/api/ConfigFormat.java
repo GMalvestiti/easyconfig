@@ -11,7 +11,7 @@ import com.gmalvestiti.minecraft.easyconfig.api.annotations.ConfigEntry;
  * between them is a one-word change on {@link Config#format()}:
  *
  * <pre>{@code
- * @Config(name = "mymod")                                // config/mymod.json
+ * @Config(name = "mymod")                                // config/mymod.json5
  * public final class MyModConfig {
  *
  *     @ConfigEntry(comment = "Scale of the on-screen HUD.")
@@ -47,8 +47,8 @@ import com.gmalvestiti.minecraft.easyconfig.api.annotations.ConfigEntry;
  */
 public enum ConfigFormat {
 
-    /** JSON5, written to {@code .json} files. */
-    JSON(".json"),
+    /** JSON5, written to {@code .json5} files. */
+    JSON(".json5"),
 
     /** TOML, written to {@code .toml} files. */
     TOML(".toml");
@@ -74,9 +74,9 @@ public enum ConfigFormat {
      * Returns the file extension this format writes, leading dot included.
      *
      * <p>Appended to {@link Config#name()} when the declared name does not already end with it,
-     * so {@code name = "mymod"} and {@code name = "mymod.json"} resolve to the same JSON file.
+     * so {@code name = "mymod"} and {@code name = "mymod.json5"} resolve to the same JSON5 file.
      *
-     * @return the extension, such as {@code ".json"}; never {@code null} or blank
+     * @return the extension, such as {@code ".json5"}; never {@code null} or blank
      */
     public String extension() {
         return extension;

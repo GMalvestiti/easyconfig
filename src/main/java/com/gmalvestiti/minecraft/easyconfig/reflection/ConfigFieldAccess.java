@@ -1,6 +1,7 @@
 package com.gmalvestiti.minecraft.easyconfig.reflection;
 
 import com.gmalvestiti.minecraft.easyconfig.api.annotations.Config;
+import com.gmalvestiti.minecraft.easyconfig.api.annotations.ConfigIgnore;
 import com.gmalvestiti.minecraft.easyconfig.exception.ConfigError;
 import com.gmalvestiti.minecraft.easyconfig.exception.ConfigScope;
 import com.gmalvestiti.minecraft.easyconfig.exception.EasyConfigException;
@@ -61,6 +62,7 @@ public final class ConfigFieldAccess {
         int modifiers = field.getModifiers();
         return !Modifier.isStatic(modifiers)
             && !Modifier.isTransient(modifiers)
+            && field.getAnnotation(ConfigIgnore.class) == null
             && field.getType().isAnnotationPresent(Config.class);
     }
 }

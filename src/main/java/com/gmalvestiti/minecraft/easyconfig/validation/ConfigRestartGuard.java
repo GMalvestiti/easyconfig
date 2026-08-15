@@ -1,6 +1,7 @@
 package com.gmalvestiti.minecraft.easyconfig.validation;
 
 import com.gmalvestiti.minecraft.easyconfig.api.annotations.ConfigEntry;
+import com.gmalvestiti.minecraft.easyconfig.api.annotations.ConfigIgnore;
 import com.gmalvestiti.minecraft.easyconfig.api.spi.Violation;
 import com.gmalvestiti.minecraft.easyconfig.exception.ConfigError;
 import com.gmalvestiti.minecraft.easyconfig.exception.ConfigScope;
@@ -112,7 +113,10 @@ public final class ConfigRestartGuard<T> {
 
     private static boolean isCandidate(Field field) {
         int modifiers = field.getModifiers();
-        return !Modifier.isStatic(modifiers) && !Modifier.isTransient(modifiers) && !field.isSynthetic();
+        return !Modifier.isStatic(modifiers)
+            && !Modifier.isTransient(modifiers)
+            && !field.isSynthetic()
+            && field.getAnnotation(ConfigIgnore.class) == null;
     }
 
     private record RestartField(Field field, Object current, Object candidate) {}

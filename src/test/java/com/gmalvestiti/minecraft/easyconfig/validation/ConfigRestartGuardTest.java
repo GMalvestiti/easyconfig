@@ -51,7 +51,7 @@ class ConfigRestartGuardTest {
 
     @Test
     void testStillAcceptsTheValueTheFileSupplies(@TempDir Path tempDir) throws IOException {
-        Files.writeString(tempDir.resolve("entries.json"), "{\"worldPreset\": \"flat\"}");
+        Files.writeString(tempDir.resolve("entries.json5"), "{\"worldPreset\": \"flat\"}");
 
         ConfigHolder<TestFixtures.EntryConfig> holder = holder(tempDir);
 
@@ -78,7 +78,7 @@ class ConfigRestartGuardTest {
 
     @Test
     void testResetsEverythingExceptTheFieldsThatOnlyApplyAtStartup(@TempDir Path tempDir) throws IOException {
-        Files.writeString(tempDir.resolve("entries.json"),
+        Files.writeString(tempDir.resolve("entries.json5"),
             "{\"hud_scale\": 9, \"worldPreset\": \"flat\", \"nested\": {\"experimental\": true}}");
 
         ConfigHolder<TestFixtures.EntryConfig> holder = holder(tempDir);

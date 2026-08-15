@@ -79,7 +79,7 @@ class SimpleConfigHolderTest {
     @Test
     void testFallsBackAndBacksUpMalformedDataOnLoad(@TempDir Path tempDir) throws Exception {
         ConfigHolder<TestFixtures.ConfigWithExtension> holder = holder(tempDir);
-        Path file = tempDir.resolve("with-extension.json");
+        Path file = tempDir.resolve("with-extension.json5");
         Files.writeString(file, "{");
 
         holder.load();
@@ -94,7 +94,7 @@ class SimpleConfigHolderTest {
     @Test
     void testThrowsOnMalformedDataUnderStrictReadPolicy(@TempDir Path tempDir) throws Exception {
         ConfigHolder<TestFixtures.ConfigWithExtension> holder = holder(tempDir, FailurePolicy.STRICT);
-        Path file = tempDir.resolve("with-extension.json");
+        Path file = tempDir.resolve("with-extension.json5");
         Files.writeString(file, "{");
 
         EasyConfigException failure = assertThrows(EasyConfigException.class, holder::load);

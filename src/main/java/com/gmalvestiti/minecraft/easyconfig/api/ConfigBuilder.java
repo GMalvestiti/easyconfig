@@ -102,7 +102,7 @@ public final class ConfigBuilder<T> {
      * {@link #baseDir(Path)} when a {@link Path} is already in hand.
      *
      * <pre>{@code
-     * .baseDir("config/mymod")   // config/mymod/<@Config.path() dirs>/<@Config.name()>.json
+     * .baseDir("config/mymod")   // config/mymod/<@Config.path() dirs>/<@Config.name()>.json5
      * }</pre>
      *
      * @param baseDir the directory string; must not be {@code null} or blank
@@ -130,7 +130,7 @@ public final class ConfigBuilder<T> {
      *
      * <pre>{@code
      * // with @Config(name = "mymod")
-     * .baseDir(Platform.getConfigDir().resolve("mymod"))   // config/mymod/mymod.json
+     * .baseDir(Platform.getConfigDir().resolve("mymod"))   // config/mymod/mymod.json5
      * .baseDir(tempDir)                                    // isolated root, useful in tests
      * }</pre>
      *
@@ -276,7 +276,7 @@ public final class ConfigBuilder<T> {
      * <p>The right choice for single-threaded setups, tests, and mod initialization: no worker
      * thread is started, so nothing outlives the holder and failures surface on the exact stack
      * that caused them. If your config is read or written from more than one thread, use
-     * {@link #createAsync()} or {@link createImmutable()} instead.
+     * {@link #createAsync()} or {@link #createImmutable()} instead.
      *
      * <p>Building touches disk. It resolves file paths, rejects invalid config models, registers
      * extension validators, and validates defaults; then it reads what is on disk and writes the

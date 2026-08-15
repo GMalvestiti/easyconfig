@@ -21,8 +21,8 @@ import java.util.function.Supplier;
  * // Per-member layout — @ConfigGroup root, each @Config member gets its own file.
  * @ConfigGroup
  * public final class ModConfigs {
- *     public ClientConfig client = new ClientConfig();   // config/mymod/client.json
- *     public ServerConfig server = new ServerConfig();   // config/mymod/server.json
+ *     public ClientConfig client = new ClientConfig();   // config/mymod/client.json5
+ *     public ServerConfig server = new ServerConfig();   // config/mymod/server.json5
  * }
  * }</pre>
  *

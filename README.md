@@ -1,25 +1,29 @@
 # EasyConfig
 
-EasyConfig is a small config library for Minecraft mods on Fabric and NeoForge, writing JSON5 or
-TOML from the same config class.
-You declare a normal Java class, annotate it with `@Config`, and EasyConfig handles the file path,
-read/write lifecycle, validation, and the live holder that publishes the current state.
+EasyConfig is a lean config library for Minecraft mods on Fabric and NeoForge. You annotate a
+plain Java class with `@Config`, hand it to a builder, and get back a `ConfigHolder` that handles
+file path resolution, read/write lifecycle, corrupt-file recovery, deep copies, validation
+callbacks, and change notification — all without a code generator, annotation processor, or config
+screen.
 
-There is no config screen, no generator, and no annotation processor. You keep your config model in
-plain Java, create one holder from the builder, and read or update values through that holder.
+The core design principle is explicitness: every behavioral choice surfaces as a builder call or
+an annotation attribute. There is no hidden global state, no classpath scanning, and no
+convention-over-configuration magic that you would have to reverse-engineer later. What you write
+is what EasyConfig does.
 
-By design, EasyConfig does not manage client/server config sync or ship config screens. That would
-pull in Minecraft or loader APIs that belong outside a data-focused library. Instead, it provides
-the holder, callbacks, commands, and data access points you need to wire those integrations in your
-mod.
+**What EasyConfig does:**
+- Resolves and owns the config file path on disk
+- Reads the file on first create, backs up corrupt files, restores defaults when needed
+- Writes only when you ask, with an atomic replace so the file is never half-written
+- Publishes a validated, deep-copied snapshot that callers read without locking
+- Runs `afterLoad`, `beforeSave`, and `validate` hooks implemented on the config class itself
+- Notifies registered listeners after each accepted change
+- Enforces restart-only fields that cannot change at runtime
 
-The API is intentionally explicit:
-
-- choose the holder mode with `create()`, `createAsync()`, or `createImmutable()`
-- choose the file format with `@Config(format = ...)`
-- choose the failure strategy per operation family with `STRICT` or `FALLBACK`
-- let EasyConfig manage the rest: path resolution, corrupt-file backups, deep copies, lifecycle hooks,
-  and validation
+**What EasyConfig does not do:**
+- Config screen — bring your own (Cloth Config, YACL, etc.)
+- Client/server sync — hook `onChange` and send packets yourself
+- Dynamic reload watching — call `load()` manually when needed
 
 ## Setup
 
@@ -31,18 +35,16 @@ artifact per loader:
 | Fabric   | `easyconfig-fabric`   |
 | NeoForge | `easyconfig-neoforge` |
 
-The EasyConfig version follows:
+The library version tracks the Minecraft major version family, not the loader version:
 
 | Minecraft | EasyConfig |
 |-----------|------------|
 | `1.21.x`  | `1.x.x`    |
 | `26.x.x+` | `2.x.x`    |
 
-This is intentional: the library version reflects the mod family, not the loader runtime version.
-
-Pick **embedded** if you want EasyConfig bundled inside your mod so users install nothing extra
-(recommended for most mods). Pick **not embedded** if you would rather declare it as a normal mod
-dependency that users download separately.
+**Embedded vs. standalone:** Embedding (via `include` / `jarJar`) bundles EasyConfig inside your
+mod jar so players install nothing extra. Standalone requires players to have EasyConfig installed
+as a separate mod. Embedding is recommended for most mods.
 
 <details>
 <summary><b>Fabric — embedded</b></summary>
@@ -58,11 +60,11 @@ dependencies {
 }
 ```
 
-`include` nests the mod jar inside yours, so no `depends` entry is required in `fabric.mod.json`.
+`include` nests the mod jar inside yours. No `depends` entry is needed in `fabric.mod.json`.
 </details>
 
 <details>
-<summary><b>Fabric — not embedded</b></summary>
+<summary><b>Fabric — standalone</b></summary>
 
 ```kotlin
 dependencies {
@@ -70,7 +72,7 @@ dependencies {
 }
 ```
 
-Then declare the dependency so the loader refuses to start without it:
+Declare the dependency so the loader refuses to start without it:
 
 ```json
 {
@@ -101,7 +103,7 @@ dependencies {
 </details>
 
 <details>
-<summary><b>NeoForge — not embedded</b></summary>
+<summary><b>NeoForge — standalone</b></summary>
 
 ```kotlin
 dependencies {
@@ -109,7 +111,7 @@ dependencies {
 }
 ```
 
-Then declare the dependency in `META-INF/neoforge.mods.toml`:
+Declare the dependency in `META-INF/neoforge.mods.toml`:
 
 ```toml
 [[dependencies.yourmodid]]
@@ -123,15 +125,17 @@ side = "BOTH"
 
 ## Quickstart
 
-Use the smallest configuration model that matches your use case:
+The three terminal builder methods correspond to three threading models:
 
-- `create()` for normal single-threaded config access
-- `createAsync()` for shared access from multiple threads
-- `createImmutable()` for read-mostly config that should never be mutated at runtime
+| Method | Thread safety | Best fit |
+|---|---|---|
+| `create()` | Caller's thread only | Regular single-threaded config |
+| `createAsync()` | Safe from any thread | Shared or background access |
+| `createImmutable()` | Read-only, safe from any thread | Config that never mutates at runtime |
 
-Declare the config class. Fields are public, initialized to their defaults, and the class needs a
-public no-argument constructor. Name the file after your mod — the config directory is shared with
-every other mod:
+Declare the config class. Fields must be public, initialized to their defaults, and the class must
+have a public no-argument constructor. Name the file after your mod — the config directory is
+shared with every other mod:
 
 ```java
 @Config(name = "mymod")
@@ -141,8 +145,10 @@ public final class MyModConfig {
 }
 ```
 
-Create the holder once, during mod initialization, and keep it. `create()` writes the config file
-if it is missing and loads it if it is there, so the holder is ready to read immediately:
+Create the holder once during mod initialization and keep it for the lifetime of the mod. `create()`
+resolves the file path, validates the model, loads any existing file (or writes the defaults if
+none exists), and validates the loaded state — the holder is ready to read immediately after it
+returns:
 
 ```java
 public final class MyMod implements ModInitializer {
@@ -152,11 +158,6 @@ public final class MyMod implements ModInitializer {
         .create();
 }
 ```
-
-If you need to keep the config immutable after startup, use `createImmutable()` instead. The
-`update` and `reset` calls still exist, but they are refused through the configured update policy.
-
-Call `load()` later only to pick up a file that changed after startup.
 
 Read through `data()`, write through `update` / `updateAndSave`:
 
@@ -168,9 +169,9 @@ if (MyMod.CONFIG.data().showHints) {
 MyMod.CONFIG.updateAndSave(config -> config.hudScale = 3);
 ```
 
-That writes `config/mymod.json`:
+That writes `config/mymod.json5`:
 
-```json
+```json5
 {
   "showHints": true,
   "hudScale": 3
@@ -182,11 +183,11 @@ That writes `config/mymod.json`:
 <details>
 <summary><b>Names and paths — <code>name</code> is the file, <code>path</code> is the directory</b></summary>
 
-The two `@Config` attributes have strictly separate jobs:
+The two `@Config` attributes have strictly separate responsibilities:
 
-- **`name`** — the **file**. Exactly one file name, and the only place the file name comes from.
-- **`path`** — the **directory** (or nested directories) that will contain it. Never a file name,
-  never a file extension.
+- **`name`** — the **file name**, and nothing else. One component only; no slashes.
+- **`path`** — the **directory** (or nested directories) under the base directory. Never a file
+  name and never a file extension.
 
 They combine under the holder's base directory:
 
@@ -195,59 +196,49 @@ They combine under the holder's base directory:
    dirs          dirs                     file
 ```
 
-`baseDir` defaults to the platform config directory (`config/`), `path` defaults to `""`, meaning
-the file sits directly in `baseDir`, and the extension comes from `@Config.format()` — `.json` by
-default, `.toml` for `ConfigFormat.TOML`. The tables below use the default JSON format.
+`baseDir` defaults to the platform config directory (`config/`). `path` defaults to `""`, which
+places the file directly in `baseDir`. The extension is determined by `@Config.format()` —
+`.json5` by default, `.toml` for `ConfigFormat.TOML`.
 
-| Declaration | Directory | File | Resolved |
+| Declaration | Directory | File | Resolved path |
 |---|---|---|---|
-| `@Config(name = "mymod")` | `config/` | `mymod.json` | `config/mymod.json` |
-| `@Config(name = "mymod.json")` | `config/` | `mymod.json` | `config/mymod.json` |
-| `@Config(name = "client", path = "mymod")` | `config/mymod/` | `client.json` | `config/mymod/client.json` |
-| `@Config(name = "hud", path = "mymod/gui")` | `config/mymod/gui/` | `hud.json` | `config/mymod/gui/hud.json` |
+| `@Config(name = "mymod")` | `config/` | `mymod.json5` | `config/mymod.json5` |
+| `@Config(name = "mymod.json5")` | `config/` | `mymod.json5` | `config/mymod.json5` |
+| `@Config(name = "client", path = "mymod")` | `config/mymod/` | `client.json5` | `config/mymod/client.json5` |
+| `@Config(name = "hud", path = "mymod/gui")` | `config/mymod/gui/` | `hud.json5` | `config/mymod/gui/hud.json5` |
 | `@Config(name = "mymod", format = TOML)` | `config/` | `mymod.toml` | `config/mymod.toml` |
 
-Any directory in `path` that does not exist yet is created on the first save.
+Any directory in `path` that does not exist is created on the first save.
 
-Rules for `name` (a file name): a single file-name component only. It must not be blank, must not
-be just the extension, and must not contain `/` or `\` — a name is never a place to put directories
-in. The extension of the declared format is appended when missing (case insensitive, so
-`MyMod.JSON` is left alone).
+**Rules for `name`:** must not be blank, must not contain `/` or `\`, and must not be exactly the
+format extension (e.g. `.json5` alone is rejected). The format extension is appended when missing,
+case-insensitively, so `MyMod.JSON5` is left alone.
 
-Rules for `path` (directories): relative only, `/`-separated, and it must stay inside `baseDir`
-after normalization. Absolute paths and `..` escapes are rejected. Do not put the file name here:
+**Rules for `path`:** relative only, `/`-separated, and it must stay inside `baseDir` after
+normalization. Absolute paths and `..` escapes are rejected with
+`ConfigError.INVALID_CONFIG_PATH`.
 
-```java
-@Config(name = "client", path = "mymod")             // config/mymod/client.json
-@Config(name = "client", path = "mymod/client.json") // config/mymod/client.json/client.json — wrong
-```
-
-`modId` is **not** part of the path, so the file name has to carry that information itself:
-
-- **One config file — name it after your mod.** `@Config(name = "mymod")` → `config/mymod.json`.
-- **Several config files — put your mod id in `path`.** `@Config(name = "client", path = "mymod")`
-  → `config/mymod/client.json`.
-
-Avoid generic names in the shared config root. Two mods that both declare
-`@Config(name = "config")` — or `"client"`, or `"settings"` — collide on the same file, and the
-second holder to be created fails with `CONFLICTING_CONFIG_PATH`:
+**Naming your files:** the mod id is not automatically part of the path. Use the mod id in the
+file name or in the path to avoid collisions with other mods:
 
 ```java
-// One file — recommended
-@Config(name = "mymod")
-public final class MyModConfig { }
+// Single file — name it after your mod
+@Config(name = "mymod")             // → config/mymod.json5
 
-// Several files — your own directory
-@Config(name = "client", path = "mymod")
-public final class ClientConfig { }
+// Several files — isolate them in your own directory
+@Config(name = "client", path = "mymod")   // → config/mymod/client.json5
+@Config(name = "server", path = "mymod")   // → config/mymod/server.json5
 
-// Avoid — config/client.json is not yours alone
-@Config(name = "client")
-public final class ClientConfig { }
+// Avoid — generic names in the shared root collide with other mods
+@Config(name = "client")            // → config/client.json5 — not yours alone
 ```
 
-To move the whole root elsewhere — a per-world directory, or a temp directory in tests — use
-`baseDir`, which is also a directory and stacks in front of `path`:
+Two config types that resolve to the same absolute path fail at holder construction with
+`ConfigError.CONFLICTING_CONFIG_PATH`. This is detected globally across all holders in the
+process.
+
+To relocate the config root — for example, into a per-world directory or a temp directory in
+tests — override `baseDir` on the builder:
 
 ```java
 EasyConfig.holder(MyModConfig.class)
@@ -256,148 +247,215 @@ EasyConfig.holder(MyModConfig.class)
     .create();
 ```
 
-Supplying `baseDir` also means the platform config directory is never queried, which is what makes
-holders usable in plain unit tests.
+Providing `baseDir` also means the platform config directory is never queried, which makes holders
+fully usable in plain unit tests without any loader present.
 </details>
 
 <details>
-<summary><b>Holder implementations — threading</b></summary>
+<summary><b>Holder implementations — threading model</b></summary>
 
-The terminal builder method you choose is the actual holder mode. All three expose the same
-`ConfigHolder` API; `createAsync()` returns the wider `AsyncConfigHolder`.
+The terminal builder method you call determines the holder implementation. All three expose the
+same `ConfigHolder` API; `createAsync()` returns the wider `AsyncConfigHolder` which adds
+non-blocking `*Async` variants.
 
 | Method | Where work runs | Thread safety | Best fit |
 |---|---|---|---|
-| `create()` | the calling thread, inline | confine to one thread (e.g. the server thread) | regular runtime config |
-| `createAsync()` | shared config worker thread | safe from any thread | shared or async access |
-| `createImmutable()` | frozen at the state loaded during the call | read-only, safe from any thread | read-mostly config |
+| `create()` | Calling thread, inline | Confine to one thread (e.g. the server thread) | Regular runtime config |
+| `createAsync()` | Shared config worker thread | Safe from any thread | Config accessed from multiple threads |
+| `createImmutable()` | Frozen at build time | Read-only, safe from any thread | Startup-only config |
 
 ```java
+// Single-threaded — all operations run on whichever thread calls them
 ConfigHolder<MyModConfig> simple = EasyConfig.holder(MyModConfig.class)
     .modId("mymod")
     .create();
 
+// Thread-safe — operations are submitted to the worker; blocking callers wait
 AsyncConfigHolder<MyModConfig> async = EasyConfig.holder(MyModConfig.class)
     .modId("mymod")
     .createAsync();
 
+// Immutable — loaded once during create; update and reset are refused
 ConfigHolder<MyModConfig> immutable = EasyConfig.holder(MyModConfig.class)
     .modId("mymod")
     .createImmutable();
 ```
 
-With `createAsync`, the blocking methods (`load`, `save`, `update`) submit to the worker and wait, so
-never call them from inside a config hook — that is reported as `BLOCKING_CALL_ON_CONFIG_THREAD`.
-Use `loadAsync`, `saveAsync`, `updateAsync`, and `updateAndSaveAsync` when you are already on that
-thread or simply do not want to block. Those methods exist only on `AsyncConfigHolder`.
+**Async:** the blocking methods (`load`, `save`, `update`, `updateAndSave`) submit work to the
+worker and join. Never call them from inside a config hook or `onChange` listener — that deadlocks
+and is reported as `ConfigError.BLOCKING_CALL_ON_CONFIG_THREAD`. Use the `*Async` variants
+(`loadAsync`, `saveAsync`, `updateAsync`, `updateAndSaveAsync`) when you are already on the config
+thread or simply do not want to block. Those methods are exclusive to `AsyncConfigHolder`.
 
-With `createImmutable`, `update` and `reset` are refused through the failure policy; `load` and
-`save` still work.
+**Immutable:** `update`, `reset`, and their variants are refused through the update failure policy
+— they throw under `STRICT` and return a rejected `UpdateResult` under `FALLBACK`. `load` and
+`save` still work: a reload replaces the published state wholesale.
 </details>
 
 <details>
 <summary><b>Reading and writing</b></summary>
 
 ```java
-MyModConfig shared = holder.data();   // cheap, shared, treat as read-only
-MyModConfig mine = holder.copy();     // deep copy you own, safe to mutate
+MyModConfig shared = holder.data();   // cheap, shared — treat as read-only
+MyModConfig mine = holder.copy();     // deep copy you own, safe to mutate freely
+```
 
-holder.update(config -> config.showHints = false);   // publish in memory
+`data()` returns the live published snapshot. It is cheap — no locking, no copying — and is the
+right choice for hot paths. Never mutate the returned object; it is shared with every concurrent
+reader. Take a `copy()` when you need to hold a reading that cannot shift while you examine
+multiple fields at once, or when you need to mutate values locally before applying them.
+
+```java
+holder.update(config -> config.showHints = false);   // publish in memory only
 holder.updateAndSave(config -> config.hudScale = 3); // publish and write to disk
 ```
 
-Holders built with `createAsync()` add non-blocking variants:
+The lambda passed to `update` receives a private candidate copy, not the live state. The candidate
+is validated before publication. If validation fails, the live state is never touched and the
+failed update is reported on the returned `UpdateResult`. A mutator that throws is treated as a
+defect and propagates regardless of the failure policy.
+
+```java
+UpdateResult result = holder.updateAndSave(config -> config.hudScale = 99);
+if (!result.accepted()) {
+    result.violations().forEach(v -> LOGGER.warn("{}: {}", v.id(), v.message()));
+}
+```
+
+Holders built with `createAsync()` add non-blocking variants that return `CompletableFuture`:
 
 ```java
 AsyncConfigHolder<MyModConfig> holder = /* ... */;
-holder.saveAsync();                                  // does not block the caller
+holder.saveAsync();
+holder.updateAndSaveAsync(config -> config.hudScale = 3).thenAccept(result -> { /* ... */ });
 ```
-
-`data()` returns the live published instance — read from it on hot paths, never mutate it. `copy()`
-runs the configured cloner, so use it only when you need isolation, such as taking a stable reading
-of several fields at once.
-
-The mutator passed to `update` receives a private candidate. It is validated first, and only an
-accepted candidate is published, so a rejected edit can never leave the config half-applied.
 </details>
 
 <details>
 <summary><b>Failure policies</b></summary>
 
-Each operation family has its own policy, defaulting to `FALLBACK`:
+Each operation family has its own `FailurePolicy`, independent of the others, defaulting to
+`FALLBACK`:
 
 ```java
 EasyConfig.holder(MyModConfig.class)
     .modId("mymod")
-    .readFailurePolicy(FailurePolicy.FALLBACK)   // corrupt file -> back it up, restore defaults
-    .writeFailurePolicy(FailurePolicy.STRICT)    // save failed -> throw
-    .updateFailurePolicy(FailurePolicy.FALLBACK) // invalid edit -> discard, keep old state
+    .readFailurePolicy(FailurePolicy.FALLBACK)   // corrupt/invalid file → back it up, restore defaults
+    .writeFailurePolicy(FailurePolicy.STRICT)    // save failure → throw EasyConfigException
+    .updateFailurePolicy(FailurePolicy.FALLBACK) // invalid edit → discard, keep current state
     .create();
 ```
 
-`STRICT` throws `EasyConfigException`; `FALLBACK` logs and degrades. Defects — a validator that
-throws, an invalid config model, a `null` mutator — always propagate regardless of policy. Every
-failure carries a `ConfigError` code, so branch on that code rather than on message text.
+Use `failurePolicy(policy)` as a shorthand to set all three at once.
 
-Both policies apply to `create()` as well: with `FALLBACK`, a corrupt or invalid file found at
-startup is moved aside as `<file name>.corrupt-<timestamp>` and the defaults are written in its
-place; with `STRICT`, `create()` throws and the file is left untouched.
+| Policy | On failure | Use when |
+|---|---|---|
+| `FALLBACK` | Logs and degrades gracefully | User-facing errors that should not crash the game |
+| `STRICT` | Throws `EasyConfigException` | Tests, or operations where silent failure is worse than crashing |
+
+**Important distinction — recoverable failures vs. defects:**
+
+`FALLBACK` only suppresses *recoverable* failures — a corrupt file, a missing field, a validation
+rejection. *Defects* are always re-thrown regardless of policy. A defect is a programming mistake
+in the mod itself: a `null` mutator, a config model that violates EasyConfig rules, a validator
+that throws an unexpected exception.
+
+Every `EasyConfigException` carries a `ConfigError` code. Branch on the code rather than on
+message text:
+
+```java
+try {
+    holder.load();
+} catch (EasyConfigException ex) {
+    if (ex.error() == ConfigError.IO_LOAD_FAILURE) {
+        // file is gone or unreadable
+    }
+}
+```
+
+**Read fallback behavior:** when `FALLBACK` handles a corrupt or invalid file found during `create()`
+or `load()`, the bad file is renamed to `<filename>.corrupt-<timestamp>` and the defaults are
+written in its place. The holder starts (or continues) in a clean state, and the player can
+recover their values from the backup.
 </details>
 
 <details>
 <summary><b>Validation and lifecycle hooks</b></summary>
 
-Implement `ConfigExtension` on the config class itself:
+Implement `ConfigExtension` on the config class to participate in the load/save/validate
+lifecycle:
 
 ```java
 @Config(name = "mymod")
 public final class MyModConfig implements ConfigExtension {
 
     public int hudScale = 2;
+    public String worldPreset = "default";
 
     @Override
-    public void afterLoad() {                       // fix up loaded values
-        hudScale = Math.max(hudScale, 1);
+    public void afterLoad() {
+        // Fix up values after loading — clamp ranges, derive computed fields, etc.
+        hudScale = Math.max(1, Math.min(8, hudScale));
     }
 
     @Override
-    public void beforeSave() { }                    // normalize what goes to disk
+    public void beforeSave() {
+        // Normalize values before writing to disk, if needed.
+        // Most configs leave this empty.
+    }
 
     @Override
     public void validate(List<Violation> violations) {
+        // Report constraint violations. Must be side-effect free.
         if (hudScale < 1 || hudScale > 8) {
-            violations.add(Violation.of("hud-scale.range", "hudScale must be 1..8, was " + hudScale));
+            violations.add(Violation.of("hud-scale.range", "hudScale must be between 1 and 8, was " + hudScale));
         }
     }
 }
 ```
 
-`validate` must be side-effect free — correct values in `afterLoad`, report them in `validate`.
-Under a `FALLBACK` update policy the violations come back on the result:
+**Hook order and contract:**
+- `afterLoad` runs after deserialization, before validation. Use it to normalize or clamp values.
+- `validate` runs after `afterLoad`, on every load and before every update is published. It must
+  be side-effect free — correct values in `afterLoad`, *report* them in `validate`.
+- `beforeSave` runs immediately before serialization.
+
+**Handling validation failures:**
+
+Under `FALLBACK` update policy, violations come back on the `UpdateResult`:
 
 ```java
 UpdateResult result = holder.updateAndSave(config -> config.hudScale = 99);
 if (!result.accepted()) {
-    result.violations().forEach(violation -> LOGGER.warn("{}: {}", violation.id(), violation.message()));
+    result.violations().forEach(v -> LOGGER.warn("{}: {}", v.id(), v.message()));
 }
 ```
 
 Under `STRICT`, the same violations ride on `EasyConfigException.violations()`.
+
+**Validation on load:** if the file on disk contains values that fail `validate`, the behavior
+depends on `readFailurePolicy`. Under `FALLBACK`, the file is backed up and defaults are written.
+Under `STRICT`, the load throws.
 </details>
 
 <details>
 <summary><b>Config groups — several files, one holder</b></summary>
 
-Annotate a shell class with `@ConfigGroup`; every public field whose type is a `@Config` class
-becomes its own file, keeping its own `name` and `path`. This is where per-file names like
-`client` and `server` belong — inside your own `path`, never loose in the config root:
+Annotate a shell class with `@ConfigGroup` to manage multiple config files through one holder. Each
+non-static, non-transient field whose declared type carries `@Config` becomes its own file. The
+file names come from the member types' own `@Config` annotations — keep them inside your mod's
+`path` to avoid collisions:
 
 ```java
 @Config(name = "client", path = "mymod")
-public final class ClientConfig { public boolean showHints = true; }
+public final class ClientConfig {
+    public boolean showHints = true;
+}
 
 @Config(name = "server", path = "mymod")
-public final class ServerConfig { public int maxPlayers = 20; }
+public final class ServerConfig {
+    public int maxPlayers = 20;
+}
 
 @ConfigGroup
 public final class ModConfigs {
@@ -408,30 +466,41 @@ public final class ModConfigs {
 
 ```java
 ConfigHolder<ModConfigs> configs = EasyConfig.holder(ModConfigs.class).modId("mymod").create();
-boolean hints = configs.data().client.showHints;   // config/mymod/client.json + config/mymod/server.json
+// reads and writes config/mymod/client.json5 and config/mymod/server.json5
+boolean hints = configs.data().client.showHints;
 ```
 
-Members must be public, non-final, and no two members may share a config type. Group members and
-the group root may each implement `ConfigExtension`; members run first on load and validate, root
-first on save.
+**Group rules:**
+- Members must be non-final (group loads replace the references).
+- No two members may share a config type — both fields would resolve to the same file.
+- Non-`@Config` fields in the group class are silently ignored for persistence and validation.
+- `@ConfigIgnore` can exclude a `@Config`-typed member from the group entirely.
+
+**Lifecycle with groups:** member hooks run first on load and validate; the group root runs first
+on save. Each member may independently implement `ConfigExtension`.
+
+**Partial failure recovery:** when one member's file is corrupt, only that member falls back to
+defaults. Other members load normally. Each bad file is backed up independently.
 </details>
 
 <details>
 <summary><b>File formats — JSON5 and TOML</b></summary>
 
-The format belongs to the config class, because it decides what the file on disk looks like:
+The format is declared on the config class, not on the builder, because it determines what the
+file on disk looks like — including the extension:
 
 ```java
-@Config(name = "mymod")                            // config/mymod.json  (default)
-@Config(name = "mymod", format = ConfigFormat.TOML) // config/mymod.toml
+@Config(name = "mymod")                             // → config/mymod.json5  (default)
+@Config(name = "mymod", format = ConfigFormat.TOML) // → config/mymod.toml
 ```
 
-Both are first class. The same class, the same annotations, and the same holder API work either
-way; only the rendered file and its extension change. In a config group, each member picks its own
-format, so a group can mix the two.
+Both formats are first-class. The same class, the same annotations, and the same holder API work
+identically either way; only the on-disk representation changes. In a `@ConfigGroup`, each member
+chooses its own format independently.
 
-JSON files are written as JSON5: comments survive, and so do trailing commas and unquoted keys if
-someone edits the file by hand.
+**JSON5** (`ConfigFormat.JSON`) writes files with the `.json5` extension. The format is a superset
+of JSON that preserves comments, tolerates trailing commas, and accepts unquoted keys — so a
+player can hand-edit the file and EasyConfig will still read it back:
 
 ```json5
 // Settings for MyMod.
@@ -442,6 +511,8 @@ someone edits the file by hand.
 }
 ```
 
+**TOML** (`ConfigFormat.TOML`) writes standard TOML:
+
 ```toml
 #Settings for MyMod.
 
@@ -450,19 +521,21 @@ hudScale = 3
 showHints = true
 ```
 
-The one difference that reaches your config class: TOML has no null literal, so a field left
-`null` is omitted from the file and comes back as its declared default on the next load. Give
-nullable fields a sensible default, or stay on JSON.
+**TOML limitation — null fields:** TOML has no null literal, so a `null` field is omitted from
+the file entirely and comes back as its declared default on the next load. JSON5 preserves `null`
+as a literal. If your config has nullable fields that may legitimately be `null`, stay on JSON5
+or give them non-null defaults.
 
-Changing the format of an existing config changes the file name too, so the old file is simply
-never read again and the defaults are written to the new one. Migrate deliberately.
+**Switching formats:** changing `format` changes the file extension, so the old file is simply
+never read again and the defaults are written to the new one. There is no automatic migration.
+Plan the format choice before shipping.
 </details>
 
 <details>
-<summary><b>Field entries — <code>@ConfigEntry</code></b></summary>
+<summary><b>Field entries — <code>@ConfigEntry</code> and <code>@ConfigIgnore</code></b></summary>
 
-`@ConfigEntry` describes one field. `@Config(comment = ...)` does the same job for the file as a
-whole.
+`@ConfigEntry` describes one field's on-disk name, comment, and restart behavior.
+`@Config(comment = ...)` does the same for the file header.
 
 ```java
 @Config(name = "mymod", comment = "Settings for MyMod.")
@@ -473,34 +546,34 @@ public final class MyModConfig {
 
     @ConfigEntry(restart = true, comment = "Takes effect on the next launch.")
     public String worldPreset = "default";
+
+    @ConfigEntry(comment = {"Enable the particle overlay.", "Disable on low-end hardware."})
+    public boolean particleOverlay = true;
 }
 ```
 
-- **`name`** lets you keep `snake_case` on disk and camelCase in code, or rename a field without
-  breaking existing files. Empty (the default) uses the Java field name.
-- **`comment`** becomes the text above the entry, one array element per line. `@Config` uses the
-  same attribute for the file header.
-- **`restart`** marks a field that is only read at startup. Any `update` that changes it is
-  rejected as a whole and reports `ConfigError.RESTART_FIELD_CHANGED`. `reset` keeps the startup
-  value for restart-only fields and restores every other field to its default.
+**`name`** decouples the file key from the Java field name. Empty by default (uses the Java name).
+Set it to keep `snake_case` on disk, to stabilize a key across a Java rename, or to use a key
+that is not a legal Java identifier.
+
+**`comment`** becomes the text above the entry. One array element per line; a blank element is a
+blank comment line; an element containing newlines is split, so a text block works just as well as
+an array. Leading whitespace in each line is preserved. Write the text, not the markers — each
+format renders them its own way:
 
 ```java
-@ConfigEntry(comment = {"Scale of the on-screen HUD.", "Between 1 and 4."})
-public int hudScale = 2;
+// JSON5: single line → // comment, multiple lines → /* block */
+@ConfigEntry(comment = "Single line.")
+@ConfigEntry(comment = {"Line one.", "Line two."})
+
+// TOML: each line gets its own # prefix
 ```
 
-Write the text, not the markers. Each format renders it its own way: JSON uses `//` for a single
-line and one `/* */` block for several, TOML uses one `#` line each. A `*/` in the text is
-defused rather than written as-is, since it would otherwise truncate the file. Comments are
-written on save and ignored on load.
+A `*/` in comment text is defused to `* /` so it can never truncate the JSON5 block.
 
-Only a class annotated `@Config` can carry a header, because that is what declares a file. Put the
-section comment on the field that holds it:
-
-```java
-@ConfigEntry(comment = "Grouped rendering options.")
-public RenderSection render = new RenderSection();
-```
+**`restart`** marks a field that is read only at game startup. Any `update` that changes the value
+of a restart field is rejected as a whole — none of the other fields in the same mutator are
+applied either:
 
 ```java
 UpdateResult result = holder.update(config -> config.worldPreset = "flat");
@@ -508,15 +581,34 @@ result.accepted();                       // false
 result.violations().getFirst().id();     // "restart.worldPreset"
 ```
 
-The check follows nested config objects, so a restart field inside a section is protected too. It
-does not descend into lists or maps.
+`reset` is the exception: it restores every other field to its default while leaving restart fields
+at the value they had at startup. The restart check follows nested config objects; it does not
+descend into collections or maps.
+
+---
+
+**`@ConfigIgnore`** excludes a public field from persistence entirely. The field never appears in
+the file, is never read back, is never commented, and is never checked by the restart guard. Its
+value is whatever the constructor sets it to after every load:
+
+```java
+@Config(name = "mymod")
+public final class MyModConfig {
+
+    public int hudScale = 2;               // persisted normally
+
+    @ConfigIgnore
+    public String sessionCache = "";       // public but never written to disk
+}
+```
+
+Use `@ConfigIgnore` when the field must be public but should never appear in the config file.
 </details>
 
 <details>
 <summary><b>Reacting to changes — <code>onChange</code></b></summary>
 
-Register listeners on the builder when something outside the config has to be rebuilt whenever the
-config changes:
+Register listeners on the builder to be notified whenever the published config state changes:
 
 ```java
 EasyConfig.holder(MyModConfig.class)
@@ -526,24 +618,29 @@ EasyConfig.holder(MyModConfig.class)
     .create();
 ```
 
-Listeners fire, in registration order, after an accepted `update`, an accepted `reset`, and a
-successful `load` — once the new state is already visible through `data()`. Nothing fires for a
-rejected update, a load that fell back to defaults, or the load `create()` performs.
+**When listeners fire:** after an accepted `update`, after an accepted `reset`, and after a
+successful `load` — in registration order, once the new state is already visible through `data()`.
 
-The listener receives the published state: read it, do not mutate it, and do not hold on to the
-reference, because the next change publishes a different object. Use `copy()` if you need a value
-after the next change.
+**When listeners do not fire:** on a rejected update, on a load that fell back to defaults, and on
+the internal load that `create()` performs during construction (nothing has changed at that point,
+and the holder does not yet exist to attach listeners to).
 
-Listeners run on the thread that performed the change, which for `createAsync()` is the config
-worker, so keep them short and never call a blocking holder method from inside one. A listener
-that throws is logged and skipped.
+**Listener contract:**
+- Receive the published state — read it, do not mutate it, and do not hold on to the reference.
+  The next change publishes a different object. Call `copy()` if you need to retain a value.
+- Run on the thread that performed the change. For `createAsync()` that is the config worker —
+  never call a blocking holder method from inside a listener on that thread. Such a call deadlocks
+  and is reported as `ConfigError.BLOCKING_CALL_ON_CONFIG_THREAD`.
+- A listener that throws is logged as `ConfigError.CHANGE_LISTENER_FAILED` and skipped. It cannot
+  fail the triggering operation or prevent later listeners from running.
 </details>
 
 <details>
 <summary><b>Custom cloning</b></summary>
 
-Cloning defaults to a tree round-trip, which is correct for any config model but shows up in a
-profile if you copy on a hot path. Replace it with a hand-written copy when that matters:
+Cloning defaults to a JSON round-trip through the config model, which is correct for any model but
+adds overhead proportional to the number of fields. Replace it with a hand-written copy when
+profiling shows `copy()` is on a hot path:
 
 ```java
 public final class MyModConfigCloner implements StateCloner<MyModConfig> {
@@ -552,7 +649,8 @@ public final class MyModConfigCloner implements StateCloner<MyModConfig> {
     public MyModConfig copy(MyModConfig source) {
         MyModConfig copy = new MyModConfig();
         copy.hudScale = source.hudScale;
-        copy.hiddenHints = new ArrayList<>(source.hiddenHints);   // copy the list, don't share it
+        copy.showHints = source.showHints;
+        copy.hiddenHints = new ArrayList<>(source.hiddenHints);   // deep-copy the list
         return copy;
     }
 }
@@ -565,6 +663,8 @@ EasyConfig.holder(MyModConfig.class)
     .create();
 ```
 
-A custom `StateCloner` must return a fully independent object. A field it forgets is silently
-shared between the published state and every copy of it.
+A custom `StateCloner` must return a fully independent object. Any field left as a shared
+reference will silently alias between the published state and every copy derived from it,
+which produces hard-to-diagnose corruption bugs when either side mutates the shared value.
 </details>
+

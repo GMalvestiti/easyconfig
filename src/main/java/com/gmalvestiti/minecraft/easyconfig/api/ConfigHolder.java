@@ -123,7 +123,7 @@ public interface ConfigHolder<T> {
      * back on the result.
      *
      * <pre>{@code
-     * holder.updateAndSave(config -> config.hudScale = 3);   // memory and config/mymod.json
+     * holder.updateAndSave(config -> config.hudScale = 3);   // memory and config/mymod.json5
      * }</pre>
      *
      * @param mutator edits a private candidate copy; must not be {@code null}

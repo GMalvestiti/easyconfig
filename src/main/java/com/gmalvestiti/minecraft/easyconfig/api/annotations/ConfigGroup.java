@@ -14,12 +14,12 @@ import java.lang.annotation.Target;
  * Other fields are ignored for validation and persistence:
  *
  * <pre>{@code
- * @Config(name = "client", path = "mymod") // config/mymod/client.json
+ * @Config(name = "client", path = "mymod") // config/mymod/client.json5
  * public final class ClientConfig {
  *     public boolean showHints = true;
  * }
  *
- * @Config(name = "server", path = "mymod") // config/mymod/server.json
+ * @Config(name = "server", path = "mymod") // config/mymod/server.json5
  * public final class ServerConfig {
  *     public int maxPlayers = 20;
  * }
