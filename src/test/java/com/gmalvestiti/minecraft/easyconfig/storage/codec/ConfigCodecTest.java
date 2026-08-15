@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -75,7 +76,7 @@ class ConfigCodecTest {
         assertEquals("steve", read.displayName);
         assertEquals(java.util.List.of("a", "b", "c"), read.tags);
         assertEquals(0.25, read.section.ratio);
-        assertEquals(false, read.section.enabled);
+        assertFalse(read.section.enabled);
     }
 
     @Test
@@ -112,7 +113,7 @@ class ConfigCodecTest {
 
         assertEquals(
             42,
-            storage.read(TestFixtures.AwkwardCommentConfig.class).value,
+            Objects.requireNonNull(storage.read(TestFixtures.AwkwardCommentConfig.class)).value,
             "a comment must never be able to truncate the file it documents");
     }
 
@@ -128,7 +129,7 @@ class ConfigCodecTest {
         assertTrue(text.contains("#Two lines,"));
         assertTrue(text.contains("#so this renders as a block."));
         assertFalse(text.contains("/*"), "TOML has no block comment to escape into");
-        assertEquals(42, storage.read(TestFixtures.AwkwardCommentTomlConfig.class).value);
+        assertEquals(42, Objects.requireNonNull(storage.read(TestFixtures.AwkwardCommentTomlConfig.class)).value);
     }
 }
 
