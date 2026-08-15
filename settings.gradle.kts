@@ -44,4 +44,4 @@ stonecutter {
     }
 }
 
-rootProject.name = "Template"
+rootProject.name = "EasyConfig"

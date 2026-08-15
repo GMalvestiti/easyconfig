@@ -14,9 +14,6 @@ logoFile="assets/${id}/icon.png"
 displayURL="${contact_homepage}"
 issueTrackerUrl="${contact_issues}"
 
-[[mixins]]
-config="${id}.mixins.json"
-
 [[dependencies.${id}]]
 modId="minecraft"
 type="required"

@@ -74,7 +74,9 @@ val excludedPackages = listOf(
 )
 
 dependencies {
-    shadow("com.github.ben-manes.caffeine:caffeine:${prop("deps.caffeine")}")
+    shadow("de.marhali:json5-java:${property("deps.json5_java")}")
+    shadow("com.electronwill.night-config:core:${property("deps.nightconfig")}")
+    shadow("com.electronwill.night-config:toml:${property("deps.nightconfig")}")
 
     testImplementation(platform("org.junit:junit-bom:${prop("deps.junit")}"))
 
@@ -141,7 +143,7 @@ tasks {
         mergeServiceFiles()
         addMultiReleaseAttribute.set(false)
 
-        exclude("META-INF/LICENSE", "META-INF/maven/**", "META-INF/versions/**/OSGI-INF/**")
+        exclude("META-INF/LICENSE", "META-INF/maven/**", "META-INF/versions/**")
     }
 
     assemble {

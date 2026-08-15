@@ -17,19 +17,11 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-        "com.gmalvestiti.minecraft.template.platform.fabric.FabricEntrypoint"
-    ],
-    "fabric-datagen": [
-      "com.gmalvestiti.minecraft.template.datagen.fabric.DataGeneratorFabric"
+        "com.gmalvestiti.minecraft.easyconfig.platform.fabric.FabricEntrypoint"
     ]
   },
-  "mixins": [
-    "${id}.mixins.json"
-  ],
-  "accessWidener": "${id}.ct",
   "depends": {
     "minecraft": "${minecraft}",
-    "fabricloader": ">=${fabric_loader}",
-    "fabric-api": ">=${fabric_api}"
+    "fabricloader": ">=${fabric_loader}"
   }
 }

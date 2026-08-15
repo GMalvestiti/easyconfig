@@ -1,34 +1,34 @@
 # See https://stonecutter.kikugie.dev/wiki/config/properties#centralized-properties
-mod.id="template"
-mod.name="Template"
+mod.id="easyconfig"
+mod.name="EasyConfig"
 mod.group="com.gmalvestiti.minecraft"
-mod.version="1.0.0"
 
 loomx.loom_version="1.17-SNAPSHOT"
 
 deps.fabric_loader="0.19.3"
-deps.caffeine="3.2.3"
+deps.json5_java="3.0.0"
+deps.nightconfig="3.9.0"
 deps.junit="6.1.2"
 deps.mockito="5.23.0"
 
-mod.description="Template description"
+mod.description="A minecraft configuration library"
 mod.author="GMalvestiti"
 mod.contact_homepage="https://modrinth.com/user/Riser876"
-mod.contact_sources="https://github.com/GMalvestiti/template"
-mod.contact_issues="https://github.com/GMalvestiti/template/issues"
+mod.contact_sources="https://github.com/GMalvestiti/easyconfig"
+mod.contact_issues="https://github.com/GMalvestiti/easyconfig/issues"
 mod.license="MIT"
 
 dev.debug=false
-dev.javadoc=false
+dev.javadoc=true
 dev.snapshot=false
 dev.username="Riser876"
 dev.uuid="13957e2e-2731-4479-8a6d-d42f89f8d756"
 
 publish.type="beta"
-publish.modrinth_id="template"
+publish.modrinth_id="easyconfig"
 publish.modrinth_changelog="1.21"
-publish.curseforge_id="1234567"
-publish.curseforge_slug="template"
+publish.curseforge_id="1646424"
+publish.curseforge_slug="easyconfig"
 publish.curseforge_client=true
 publish.curseforge_server=true
 publish.dry_run=true
@@ -36,13 +36,13 @@ publish.dry_run=true
 
 ["1.21"]
 
+mod.version="1.0.0"
 publish.start="1.21"
 publish.end="1.21.11"
 
 [fabric."1.21"]
 # Mod compatibility range in fabric.mod.json/neoforge.mods.toml
 mod.mc_compat=">=1.21 <=1.21.11"
-deps.fabric_api="0.102.0+1.21"
 
 [neoforge."1.21"]
 mod.mc_compat="[1.21, 1.21.11]"
@@ -51,12 +51,12 @@ deps.neoforge_loader="21.0.167"
 
 ["26.1"]
 
+mod.version="2.0.0"
 publish.start="26.1"
 publish.end="latest"
 
 [fabric."26.1"]
 mod.mc_compat=">=26.1"
-deps.fabric_api="0.145.1+26.1"
 
 [neoforge."26.1"]
 mod.mc_compat="[26.1,)"

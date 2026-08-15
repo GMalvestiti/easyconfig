@@ -4,7 +4,7 @@ plugins {
 }
 
 // DO NOT set group = ...!
-version = "${property("mod.version")}+${sc.current.version}"
+version = "${property("mod.version")}"
 
 if (property("dev.snapshot").toString().toBoolean()) {
     version = "$version-SNAPSHOT"
@@ -42,10 +42,6 @@ java {
 
 loom {
     fabricModJsonPath = rootProject.file("src/main/resources/fabric.mod.json") // Useful for interface injection
-    accessWidenerPath = sc.process(
-        rootProject.file("src/main/resources/${property("mod.id")}.ct"),
-        "build/${property("mod.id")}.ct"
-    )
 
     decompilerOptions.named("vineflower") {
         options.put("mark-corresponding-synthetics", "1") // Adds names to lambdas - useful for mixins
@@ -64,18 +60,11 @@ loom {
     }
 }
 
-fabricApi {
-    configureDataGeneration {
-        client = true
-    }
-}
-
 dependencies {
     minecraft("com.mojang:minecraft:${sc.current.version}")
     loomx.applyMojangMappings()
 
     modImplementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
 
     testImplementation("net.fabricmc:fabric-loader-junit:${property("deps.fabric_loader")}")
 }
@@ -124,7 +113,6 @@ tasks {
             register("contact_issues", "mod.contact_issues")
             register("license", "mod.license")
             register("fabric_loader", "deps.fabric_loader")
-            register("fabric_api", "deps.fabric_api")
         }
 
         filesMatching("fabric.mod.json") { expand(props) }
@@ -143,12 +131,7 @@ publishMods {
     displayName.set("${property("mod.name")} Fabric ${property("mod.version")} for ${property("publish.start")}")
     modLoaders.add("fabric")
 
-    modrinth {
-        requires("fabric-api")
-    }
-
     curseforge {
         javaVersions.add(requiredJava)
-        requires("fabric-api")
     }
 }

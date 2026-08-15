@@ -4,7 +4,7 @@ plugins {
     id("net.neoforged.moddev") version "2.0.142"
 }
 
-version = "${property("mod.version")}+${sc.current.version}"
+version = "${property("mod.version")}"
 
 if (property("dev.snapshot").toString().toBoolean()) {
     version = "$version-SNAPSHOT"
@@ -66,21 +66,6 @@ neoForge {
         register("server") {
             server()
             programArgument("--nogui")
-        }
-
-        register("data") {
-            if (sc.current.parsed < "1.21.4") {
-                data()
-            } else {
-                clientData()
-            }
-
-            programArguments.addAll(
-                "--mod", property("mod.id") as String,
-                "--all",
-                "--output", file("src/main/generated").absolutePath,
-                "--existing", file("src/main/resources").absolutePath
-            )
         }
     }
 
