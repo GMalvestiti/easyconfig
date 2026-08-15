@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "id": "${id}",
+  "version": "${version}",
+  "name": "${name}",
+  "description": "${description}",
+  "authors": [
+    "${author}"
+  ],
+  "contact": {
+    "homepage": "${contact_homepage}",
+    "sources": "${contact_sources}",
+    "issues": "${contact_issues}"
+  },
+  "license": "${license}",
+  "icon": "assets/${id}/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+        "com.gmalvestiti.minecraft.template.platform.fabric.FabricEntrypoint"
+    ],
+    "fabric-datagen": [
+      "com.gmalvestiti.minecraft.template.datagen.fabric.DataGeneratorFabric"
+    ]
+  },
+  "mixins": [
+    "${id}.mixins.json"
+  ],
+  "accessWidener": "${id}.ct",
+  "depends": {
+    "minecraft": "${minecraft}",
+    "fabricloader": ">=${fabric_loader}",
+    "fabric-api": ">=${fabric_api}"
+  }
+}

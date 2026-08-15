@@ -1,0 +1,24 @@
+#!/bin/bash
+
+VCS_VERSION=$(grep -oE 'vcsVersion\s*=\s*"[^"]+"' settings.gradle.kts | sed -E 's/vcsVersion\s*=\s*"([^"]+)"/\1/')
+
+ACTIVE_VERSION=$(grep -oE 'stonecutter\s+active\s+"[^"]+"' stonecutter.gradle.kts | sed -E 's/stonecutter\s+active\s+"([^"]+)"/\1/')
+
+if [ -z "$ACTIVE_VERSION" ]; then
+    ACTIVE_VERSION=$(grep -oE 'stonecutter\s+active\s*=\s*"[^"]+"' stonecutter.gradle.kts | sed -E 's/stonecutter\s+active\s*=\s*"([^"]+)"/\1/')
+fi
+
+if [ -z "$VCS_VERSION" ] || [ -z "$ACTIVE_VERSION" ]; then
+    echo "[Error] Could not parse Stonecutter versions from configuration files."
+    exit 1
+fi
+
+if [ "$VCS_VERSION" != "$ACTIVE_VERSION" ]; then
+    echo "[Commit Blocked] Stonecutter version mismatch detected!"
+    echo "   » settings.gradle.kts (vcsVersion): '$VCS_VERSION'"
+    echo "   » stonecutter.gradle.kts (active):  '$ACTIVE_VERSION'"
+    echo "Please set your active version back to '$VCS_VERSION' or update vcsVersion before committing."
+    exit 1
+fi
+
+exit 0
