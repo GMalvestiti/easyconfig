@@ -17,13 +17,12 @@ is what EasyConfig does.
 - Writes only when you ask, with an atomic replace so the file is never half-written
 - Publishes a validated, deep-copied snapshot that callers read without locking
 - Runs `afterLoad`, `beforeSave`, and `validate` hooks implemented on the config class itself
-- Notifies registered listeners after each accepted change
+- Allows integration with lifecycle events — `onUpdate`, `onLoad`, `onSave`, `onReset` — on the builder or the live holder
 - Enforces restart-only fields that cannot change at runtime
 
-**What EasyConfig does not do:**
-- Config screen — bring your own (Cloth Config, YACL, etc.)
-- Client/server sync — hook `onChange` and send packets yourself
-- Dynamic reload watching — call `load()` manually when needed
+**Outside EasyConfig's scope:**
+- **Config screen:** EasyConfig is a data layer — it does not render UI.
+- **Client/server sync:** hook `onUpdate` to detect changes and dispatch packets with your own networking code.
 
 ## Setup
 
@@ -282,7 +281,7 @@ ConfigHolder<MyModConfig> immutable = EasyConfig.holder(MyModConfig.class)
 ```
 
 **Async:** the blocking methods (`load`, `save`, `update`, `updateAndSave`) submit work to the
-worker and join. Never call them from inside a config hook or `onChange` listener — that deadlocks
+worker and join. Calling them from inside a config hook or lifecycle listener will deadlock
 and is reported as `ConfigError.BLOCKING_CALL_ON_CONFIG_THREAD`. Use the `*Async` variants
 (`loadAsync`, `saveAsync`, `updateAsync`, `updateAndSaveAsync`) when you are already on the config
 thread or simply do not want to block. Those methods are exclusive to `AsyncConfigHolder`.
@@ -301,8 +300,7 @@ MyModConfig mine = holder.copy();     // deep copy you own, safe to mutate freel
 ```
 
 `data()` returns the live published snapshot. It is cheap — no locking, no copying — and is the
-right choice for hot paths. Never mutate the returned object; it is shared with every concurrent
-reader. Take a `copy()` when you need to hold a reading that cannot shift while you examine
+right choice for hot paths. The returned object is shared with every concurrent reader — mutating it would corrupt the live state. Take a `copy()` when you need to hold a reading that cannot shift while you examine
 multiple fields at once, or when you need to mutate values locally before applying them.
 
 ```java
@@ -527,8 +525,7 @@ as a literal. If your config has nullable fields that may legitimately be `null`
 or give them non-null defaults.
 
 **Switching formats:** changing `format` changes the file extension, so the old file is simply
-never read again and the defaults are written to the new one. There is no automatic migration.
-Plan the format choice before shipping.
+never read again and the defaults are written to the new one. Deciding on a format before the first public release is worthwhile, as there is no automatic migration path.
 </details>
 
 <details>
@@ -606,31 +603,41 @@ Use `@ConfigIgnore` when the field must be public but should never appear in the
 </details>
 
 <details>
-<summary><b>Reacting to changes — <code>onChange</code></b></summary>
+<summary><b>Lifecycle listeners — <code>onUpdate</code>, <code>onLoad</code>, <code>onSave</code>, <code>onReset</code></b></summary>
 
-Register listeners on the builder to be notified whenever the published config state changes:
+Register listeners on the builder, or on the holder after creation, to react to specific config events:
 
 ```java
-EasyConfig.holder(MyModConfig.class)
+// Register on the builder (before creation)
+ConfigHolder<MyModConfig> holder = EasyConfig.holder(MyModConfig.class)
     .modId("mymod")
-    .onChange(config -> hudRenderer.setScale(config.hudScale))
-    .onChange(config -> LOGGER.info("config reloaded"))
+    .onUpdate(config -> hudRenderer.setScale(config.hudScale))
+    .onLoad(config -> LOGGER.info("config loaded from disk"))
+    .onSave(config -> LOGGER.debug("config saved"))
+    .onReset(config -> LOGGER.info("config reset to defaults"))
     .create();
+
+// Register on the holder after creation — useful for addons and extensions
+holder.onUpdate(config -> myAddon.onConfigChanged(config));
 ```
 
-**When listeners fire:** after an accepted `update`, after an accepted `reset`, and after a
-successful `load` — in registration order, once the new state is already visible through `data()`.
+Each hook fires only for its specific operation:
+
+| Hook | Fires after |
+|------|-------------|
+| `onUpdate` | An accepted `update` or `updateAndSave` |
+| `onLoad` | A successful `load` (not on a fallback-to-defaults load) |
+| `onSave` | A successful `save`, `updateAndSave`, or `resetAndSave` |
+| `onReset` | An accepted `reset` or `resetAndSave` |
 
 **When listeners do not fire:** on a rejected update, on a load that fell back to defaults, and on
-the internal load that `create()` performs during construction (nothing has changed at that point,
-and the holder does not yet exist to attach listeners to).
+the build-time load that `create()` performs during construction (the holder does not yet exist
+to attach listeners to, and nothing has changed from the caller's perspective).
 
 **Listener contract:**
-- Receive the published state — read it, do not mutate it, and do not hold on to the reference.
-  The next change publishes a different object. Call `copy()` if you need to retain a value.
-- Run on the thread that performed the change. For `createAsync()` that is the config worker —
-  never call a blocking holder method from inside a listener on that thread. Such a call deadlocks
-  and is reported as `ConfigError.BLOCKING_CALL_ON_CONFIG_THREAD`.
+- Receive the published state — the same object `data()` returns at that moment. It is safe to read but should not be mutated or retained beyond the listener body. Call `copy()` if values need to outlive the callback.
+- Run on the thread that performed the operation. For `createAsync()` that is the config worker —
+  calling a blocking holder method from inside a listener on that thread will deadlock and is reported as `ConfigError.BLOCKING_CALL_ON_CONFIG_THREAD`.
 - A listener that throws is logged as `ConfigError.CHANGE_LISTENER_FAILED` and skipped. It cannot
   fail the triggering operation or prevent later listeners from running.
 </details>

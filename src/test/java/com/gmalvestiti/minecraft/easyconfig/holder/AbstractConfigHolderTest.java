@@ -162,7 +162,7 @@ class AbstractConfigHolderTest {
             FailurePolicy.FALLBACK,
             new StateClonerImplementation<>(TestFixtures.PlainGroupWithExtendedMemberConfig.class),
             HolderImplementation.SIMPLE,
-            List.of()
+            List.of(), List.of(), List.of(), List.of()
         );
         ConfigHolder<TestFixtures.PlainGroupWithExtendedMemberConfig> holder = HolderFactory.create(settings);
 
@@ -229,7 +229,7 @@ class AbstractConfigHolderTest {
             updatePolicy,
             new StateClonerImplementation<>(TestFixtures.ConfigWithExtension.class),
             implementation,
-            List.of()
+            List.of(), List.of(), List.of(), List.of()
         );
         return HolderFactory.create(settings);
     }

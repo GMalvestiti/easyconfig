@@ -66,7 +66,7 @@ public enum ConfigError {
     VALIDATOR_FAILED("Validation for %s threw an exception: %s", true),
     /** Signals that a {@code ConfigExtension} hook throws. */
     EXTENSION_HOOK_FAILED("Config extension hook '%s' threw an exception: %s", true),
-    /** Signals that an {@code onChange} listener throws after a change was published. */
+    /** Signals that a config lifecycle listener throws after an event is dispatched. */
     CHANGE_LISTENER_FAILED("Config change listener threw an exception: %s"),
     /** Signals that holder construction cannot complete. */
     INITIALIZATION_FAILED("Configuration initialization failed: %s"),

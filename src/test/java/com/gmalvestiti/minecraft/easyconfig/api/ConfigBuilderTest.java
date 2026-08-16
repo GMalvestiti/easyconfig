@@ -37,7 +37,10 @@ class ConfigBuilderTest {
         assertEquals(FailurePolicy.FALLBACK, settings.writeFailurePolicy());
         assertEquals(FailurePolicy.FALLBACK, settings.updateFailurePolicy());
         assertEquals(HolderImplementation.SIMPLE, settings.implementation());
-        assertTrue(settings.changeListeners().isEmpty());
+        assertTrue(settings.updateListeners().isEmpty());
+        assertTrue(settings.loadListeners().isEmpty());
+        assertTrue(settings.saveListeners().isEmpty());
+        assertTrue(settings.resetListeners().isEmpty());
     }
 
     @Test
@@ -50,14 +53,14 @@ class ConfigBuilderTest {
                 .writeFailurePolicy(FailurePolicy.STRICT)
                 .updateFailurePolicy(FailurePolicy.STRICT)
                 .stateCloner(source -> source)
-                .onChange(state -> {
+                .onUpdate(state -> {
                 })
                 .settings();
 
         assertEquals(FailurePolicy.STRICT, settings.readFailurePolicy());
         assertEquals(FailurePolicy.STRICT, settings.writeFailurePolicy());
         assertEquals(FailurePolicy.STRICT, settings.updateFailurePolicy());
-        assertEquals(1, settings.changeListeners().size());
+        assertEquals(1, settings.updateListeners().size());
     }
 
     @Test
@@ -76,17 +79,17 @@ class ConfigBuilderTest {
     }
 
     @Test
-    void testNotifiesListenersOnAcceptedChangesButNotOnTheBuildTimeLoad(@TempDir Path tempDir) {
+    void testOnUpdateFiresOnAcceptedUpdateButNotOnBuildLoadOrReset(@TempDir Path tempDir) {
         List<Integer> seen = new ArrayList<>();
 
         ConfigHolder<TestFixtures.SimpleConfig> holder =
             EasyConfig.holder(TestFixtures.SimpleConfig.class)
                 .modId("mod")
                 .baseDir(tempDir.toString())
-                .onChange(state -> {
+                .onUpdate(state -> {
                     throw new IllegalStateException("a broken listener must not stop the others");
                 })
-                .onChange(state -> seen.add(state.value))
+                .onUpdate(state -> seen.add(state.value))
                 .create();
 
         assertTrue(seen.isEmpty(), "building a holder is not a change");
@@ -95,7 +98,93 @@ class ConfigBuilderTest {
         holder.load();
         holder.reset();
 
-        assertEquals(List.of(5, 5, 1), seen);
+        assertEquals(List.of(5), seen);
+    }
+
+    @Test
+    void testOnLoadFiresAfterSuccessfulLoadOnly(@TempDir Path tempDir) {
+        List<Integer> seen = new ArrayList<>();
+
+        ConfigHolder<TestFixtures.SimpleConfig> holder =
+            EasyConfig.holder(TestFixtures.SimpleConfig.class)
+                .modId("mod")
+                .baseDir(tempDir.toString())
+                .onLoad(state -> seen.add(state.value))
+                .create();
+
+        assertTrue(seen.isEmpty(), "build-time load must not fire onLoad");
+
+        holder.update(config -> config.value = 7);
+        holder.load();
+        holder.reset();
+
+        assertEquals(List.of(1), seen, "onLoad fires once, with the value read from disk");
+    }
+
+    @Test
+    void testOnSaveFiresAfterEveryPersistOperation(@TempDir Path tempDir) {
+        List<Integer> seen = new ArrayList<>();
+
+        ConfigHolder<TestFixtures.SimpleConfig> holder =
+            EasyConfig.holder(TestFixtures.SimpleConfig.class)
+                .modId("mod")
+                .baseDir(tempDir.toString())
+                .onSave(state -> seen.add(state.value))
+                .create();
+
+        holder.update(config -> config.value = 3);
+        holder.save();
+        holder.updateAndSave(config -> config.value = 9);
+        holder.resetAndSave();
+
+        assertEquals(List.of(3, 9, 1), seen);
+    }
+
+    @Test
+    void testOnResetFiresAfterAcceptedReset(@TempDir Path tempDir) {
+        List<Integer> seen = new ArrayList<>();
+
+        ConfigHolder<TestFixtures.SimpleConfig> holder =
+            EasyConfig.holder(TestFixtures.SimpleConfig.class)
+                .modId("mod")
+                .baseDir(tempDir.toString())
+                .onReset(state -> seen.add(state.value))
+                .create();
+
+        holder.update(config -> config.value = 4);
+        holder.load();
+        holder.reset();
+        holder.resetAndSave();
+
+        assertEquals(List.of(1, 1), seen);
+    }
+
+    @Test
+    void testRegistersListenersAfterHolderCreation(@TempDir Path tempDir) {
+        List<Integer> updates = new ArrayList<>();
+        List<Integer> loads   = new ArrayList<>();
+        List<Integer> saves   = new ArrayList<>();
+        List<Integer> resets  = new ArrayList<>();
+
+        ConfigHolder<TestFixtures.SimpleConfig> holder =
+            EasyConfig.holder(TestFixtures.SimpleConfig.class)
+                .modId("mod")
+                .baseDir(tempDir.toString())
+                .create();
+
+        holder.onUpdate(state -> updates.add(state.value));
+        holder.onLoad(state -> loads.add(state.value));
+        holder.onSave(state -> saves.add(state.value));
+        holder.onReset(state -> resets.add(state.value));
+
+        holder.updateAndSave(config -> config.value = 6);
+        holder.load();
+        holder.reset();
+
+        assertEquals(List.of(6), updates);
+        assertEquals(List.of(6), loads, "load re-reads the file written by updateAndSave");
+        assertEquals(List.of(6), saves);
+        assertEquals(List.of(1), resets);
     }
 
     @Test
@@ -106,7 +195,7 @@ class ConfigBuilderTest {
             EasyConfig.holder(TestFixtures.SimpleConfig.class)
                 .modId("mod")
                 .baseDir(tempDir.toString())
-                .onChange(state -> seen.add(state.value))
+                .onLoad(state -> seen.add(state.value))
                 .create();
 
         Files.writeString(tempDir.resolve("simple.json5"), "{ not a config");
@@ -122,7 +211,7 @@ class ConfigBuilderTest {
             EasyConfig.holder(TestFixtures.ConfigWithExtension.class)
                 .modId("mod")
                 .baseDir(tempDir.toString())
-                .onChange(state -> seen.add(state.value))
+                .onUpdate(state -> seen.add(state.value))
                 .create();
 
         assertFalse(holder.update(config -> config.value = -1).accepted());

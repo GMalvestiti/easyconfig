@@ -19,7 +19,10 @@ public record ConfigSettings<T>(
     FailurePolicy updateFailurePolicy,
     StateCloner<T> stateCloner,
     HolderImplementation implementation,
-    List<Consumer<T>> changeListeners
+    List<Consumer<T>> updateListeners,
+    List<Consumer<T>> loadListeners,
+    List<Consumer<T>> saveListeners,
+    List<Consumer<T>> resetListeners
 ) {
     public ConfigSettings {
         Objects.requireNonNull(type, "type");
@@ -30,6 +33,9 @@ public record ConfigSettings<T>(
         Objects.requireNonNull(updateFailurePolicy, "updateFailurePolicy");
         Objects.requireNonNull(stateCloner, "stateCloner");
         Objects.requireNonNull(implementation, "implementation");
-        changeListeners = List.copyOf(changeListeners);
+        updateListeners = List.copyOf(updateListeners);
+        loadListeners = List.copyOf(loadListeners);
+        saveListeners = List.copyOf(saveListeners);
+        resetListeners = List.copyOf(resetListeners);
     }
 }

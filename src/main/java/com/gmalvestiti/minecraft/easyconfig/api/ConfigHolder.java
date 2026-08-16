@@ -182,4 +182,46 @@ public interface ConfigHolder<T> {
      * @throws EasyConfigException when the write policy is strict and persistence fails; also when a defect error occurs
      */
     void save();
+
+    /**
+     * Registers a listener notified after an accepted {@link #update} or {@link #updateAndSave}.
+     *
+     * <p>The listener receives the newly published state — the same object {@link #data()} returns
+     * at that moment. Read it; do not mutate it.
+     *
+     * <p>May be called at any time after the holder is created, which lets addons and extensions
+     * register their own reactions without access to the builder.
+     *
+     * @param listener the callback, or {@code null} to register nothing
+     * @return this holder, for chaining
+     */
+    ConfigHolder<T> onUpdate(Consumer<T> listener);
+
+    /**
+     * Registers a listener notified after a successful {@link #load}.
+     *
+     * <p>Does not fire on a load that fell back to defaults due to a read failure, or on the
+     * build-time load performed by {@link ConfigBuilder#create()}.
+     *
+     * @param listener the callback, or {@code null} to register nothing
+     * @return this holder, for chaining
+     */
+    ConfigHolder<T> onLoad(Consumer<T> listener);
+
+    /**
+     * Registers a listener notified after a successful {@link #save}, {@link #updateAndSave},
+     * or {@link #resetAndSave}.
+     *
+     * @param listener the callback, or {@code null} to register nothing
+     * @return this holder, for chaining
+     */
+    ConfigHolder<T> onSave(Consumer<T> listener);
+
+    /**
+     * Registers a listener notified after an accepted {@link #reset} or {@link #resetAndSave}.
+     *
+     * @param listener the callback, or {@code null} to register nothing
+     * @return this holder, for chaining
+     */
+    ConfigHolder<T> onReset(Consumer<T> listener);
 }
