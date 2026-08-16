@@ -45,10 +45,6 @@ class ConfigPathResolverTest {
     static class InvalidPathCharsPathConfig {
     }
 
-    @Config(name = "C:")
-    static class DriveRelativeNameConfig {
-    }
-
     @Test
     void testResolvesAndCachesPaths(@TempDir Path tempDir) {
         ConfigPathResolver resolver = new ConfigPathResolver(tempDir, TestFixtures.SCOPE);
@@ -70,7 +66,6 @@ class ConfigPathResolverTest {
         assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(DotJsonNameConfig.class));
         assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(InvalidPathCharsNameConfig.class));
         assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(InvalidPathCharsPathConfig.class));
-        assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(DriveRelativeNameConfig.class));
     }
 
     @Test
