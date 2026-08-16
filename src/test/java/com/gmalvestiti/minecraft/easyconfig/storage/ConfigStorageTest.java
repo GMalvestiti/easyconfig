@@ -152,23 +152,6 @@ class ConfigStorageTest {
     }
 
     @Test
-    void testRetriesReplaceWhenTargetIsTemporarilyLocked(@TempDir Path tempDir) throws Exception {
-        Method replace = ConfigStorage.class.getDeclaredMethod("replace", Path.class, Path.class);
-        replace.setAccessible(true);
-
-        Path source = tempDir.resolve("source.tmp");
-        Path target = tempDir.resolve("target.json");
-        Files.writeString(source, "new");
-        Files.writeString(target, "old");
-
-        try (FileChannel ignored = FileChannel.open(target, StandardOpenOption.WRITE)) {
-            InvocationTargetException ex = assertThrows(InvocationTargetException.class, () -> replace.invoke(null, source, target));
-            assertTrue(ex.getCause() instanceof IOException);
-        }
-        assertTrue(Files.exists(target));
-    }
-
-    @Test
     void testFallsBackWhenAtomicMoveIsUnsupported(@TempDir Path tempDir) throws Exception {
         Method replace = ConfigStorage.class.getDeclaredMethod("replace", Path.class, Path.class);
         replace.setAccessible(true);

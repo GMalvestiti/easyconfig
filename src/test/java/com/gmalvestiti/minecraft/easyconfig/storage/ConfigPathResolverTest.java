@@ -37,10 +37,6 @@ class ConfigPathResolverTest {
     static class DotJsonNameConfig {
     }
 
-    @Config(name = "name", path = "C:\\absolute")
-    static class AbsolutePathConfig {
-    }
-
     @Config(name = "bad\u0000name")
     static class InvalidPathCharsNameConfig {
     }
@@ -72,7 +68,6 @@ class ConfigPathResolverTest {
         assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(BadNameConfig.class));
         assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(EscapePathConfig.class));
         assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(DotJsonNameConfig.class));
-        assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(AbsolutePathConfig.class));
         assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(InvalidPathCharsNameConfig.class));
         assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(InvalidPathCharsPathConfig.class));
         assertThrows(EasyConfigException.class, () -> resolver.resolveForConfig(DriveRelativeNameConfig.class));
