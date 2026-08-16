@@ -17,8 +17,8 @@ lifecycle events.
 * **Customizable entries:** control file paths, field names, comments, ignored fields, and other persistence details.
 
 **Outside Easy Config's scope:**
-- **Config screen:** Easy Config is a data layer — it does not render UI by itself.
-- **Client/server sync:** use `onUpdate` to detect changes and dispatch packets.
+* **Config screen:** Easy Config is a data layer — it does not render UI by itself.
+* **Client/server sync:** use `UpdateResult` or `onUpdate` to detect changes and dispatch packets.
 
 **Documentation:** [Wiki](https://github.com/gmalvestiti/easyconfig/wiki)
 
