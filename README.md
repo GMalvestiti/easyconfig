@@ -20,6 +20,8 @@ lifecycle events.
 - **Config screen:** Easy Config is a data layer — it does not render UI by itself.
 - **Client/server sync:** use `onUpdate` to detect changes and dispatch packets.
 
+**Documentation:** [Wiki](https://github.com/gmalvestiti/easyconfig/wiki)
+
 ## Setup
 
 Artifacts are published to Maven Central under the group `com.gmalvestiti.minecraft`, with one
@@ -187,6 +189,3 @@ That writes `config/mymod.json5`:
   "hudScale": 3
 }
 ```
-
-**Documentation:** [Wiki](https://github.com/gmalvestiti/easyconfig/wiki)
-
