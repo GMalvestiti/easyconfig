@@ -50,14 +50,21 @@ tasks {
         if (isDryRun) {
             dependsOn(stonecutter.tasks.named("publishToMavenLocal"))
         } else {
+            val isWindows = Os.isFamily(Os.FAMILY_WINDOWS)
+            val isSnapshot = project.findProperty("dev.snapshot")?.toString()?.toBoolean() ?: false
             val autoRelease = project.findProperty("publish.auto_release")?.toString()?.toBoolean() ?: false
-            val closeTask = if (autoRelease) "closeAndReleaseSonatypeStagingRepository" else "closeSonatypeStagingRepository"
 
-            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                commandLine("cmd", "/c", "gradlew.bat", "publishToSonatype", closeTask, "--no-configuration-cache")
-            } else {
-                commandLine("./gradlew", "publishToSonatype", closeTask, "--no-configuration-cache")
-            }
+            commandLine(buildList {
+                if (isWindows) addAll(listOf("cmd", "/c", "gradlew.bat")) else add("./gradlew")
+
+                add("publishToSonatype")
+
+                if (!isSnapshot) {
+                    add(if (autoRelease) "closeAndReleaseSonatypeStagingRepository" else "closeSonatypeStagingRepository")
+                }
+
+                add("--no-configuration-cache")
+            })
         }
     }
 
@@ -90,6 +97,9 @@ tasks {
 nexusPublishing {
 
     packageGroup.set("${properties["mod.group"]}")
+
+    val isSnapshot = properties["dev.snapshot"]?.toString()?.toBoolean() ?: false
+    useStaging.set(!isSnapshot)
 
     repositories {
         sonatype {
