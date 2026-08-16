@@ -1,5 +1,8 @@
+import org.apache.tools.ant.taskdefs.condition.Os
+
 plugins {
     id("dev.kikugie.stonecutter")
+    id("io.github.gradle-nexus.publish-plugin") version "2.0.0"
 }
 
 stonecutter active "26.1-fabric"
@@ -38,7 +41,7 @@ stonecutter parameters {
 }
 
 tasks {
-    register("publishMaven") {
+    register<Exec>("publishMaven") {
         group = "custom"
         description = "Publish all versions to the Maven repository"
 
@@ -47,7 +50,14 @@ tasks {
         if (isDryRun) {
             dependsOn(stonecutter.tasks.named("publishToMavenLocal"))
         } else {
-            dependsOn(stonecutter.tasks.named("publishAllPublicationsToMavenCentralRepository"))
+            val autoRelease = project.findProperty("publish.auto_release")?.toString()?.toBoolean() ?: false
+            val closeTask = if (autoRelease) "closeAndReleaseSonatypeStagingRepository" else "closeSonatypeStagingRepository"
+
+            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+                commandLine("cmd", "/c", "gradlew.bat", "publishToSonatype", closeTask, "--no-configuration-cache")
+            } else {
+                commandLine("./gradlew", "publishToSonatype", closeTask, "--no-configuration-cache")
+            }
         }
     }
 
@@ -74,5 +84,20 @@ tasks {
         group = "custom"
         description = "Run test of the active Stonecutter version"
         dependsOn(stonecutter.current!!.project + ":test")
+    }
+}
+
+nexusPublishing {
+
+    packageGroup.set("${properties["mod.group"]}")
+
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+
+            username.set(providers.gradleProperty("sonatypeUsername").orNull)
+            password.set(providers.gradleProperty("sonatypePassword").orNull)
+        }
     }
 }

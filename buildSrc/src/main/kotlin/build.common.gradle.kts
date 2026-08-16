@@ -236,22 +236,6 @@ afterEvaluate {
                 }
             }
         }
-
-        repositories {
-            maven {
-                name = "MavenCentral"
-
-                val releasesRepoUrl = "https://central.sonatype.com"
-                val snapshotsRepoUrl = "https://central.sonatype.com/repository/maven-snapshots"
-
-                url = uri(if (prop("dev.snapshot").toBoolean()) snapshotsRepoUrl else releasesRepoUrl)
-
-                credentials {
-                    username = providers.gradleProperty("mavenCentralUsername").orNull
-                    password = providers.gradleProperty("mavenCentralPassword").orNull
-                }
-            }
-        }
     }
 
     signing {

@@ -31,6 +31,7 @@ publish.curseforge_id="1646424"
 publish.curseforge_slug="easyconfig"
 publish.curseforge_client=true
 publish.curseforge_server=true
+publish.auto_release=false
 publish.dry_run=false
 
 
