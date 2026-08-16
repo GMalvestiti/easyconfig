@@ -35,7 +35,7 @@ class AsyncConfigHolderTest {
         assertTrue(holder.update(config -> config.value = 7).accepted());
         holder.save();
 
-        assertTrue(Files.exists(tempDir.resolve("with-extension.json")));
+        assertTrue(Files.exists(tempDir.resolve("with-extension.json5")));
 
         holder.update(config -> config.value = 42);
         holder.load();
@@ -134,7 +134,7 @@ class AsyncConfigHolderTest {
     void testFallsBackAndBacksUpMalformedDataOnLoad(@TempDir Path tempDir) throws Exception {
         AsyncConfigHolder<TestFixtures.ConfigWithExtension> holder =
             holder(tempDir, FailurePolicy.STRICT, FailurePolicy.FALLBACK);
-        Path file = tempDir.resolve("with-extension.json");
+        Path file = tempDir.resolve("with-extension.json5");
         Files.writeString(file, "{");
 
         holder.load();
@@ -150,7 +150,7 @@ class AsyncConfigHolderTest {
     void testThrowsOnMalformedDataUnderStrictReadPolicy(@TempDir Path tempDir) throws Exception {
         AsyncConfigHolder<TestFixtures.ConfigWithExtension> holder =
             holder(tempDir, FailurePolicy.STRICT, FailurePolicy.STRICT);
-        Path file = tempDir.resolve("with-extension.json");
+        Path file = tempDir.resolve("with-extension.json5");
         Files.writeString(file, "{");
 
         EasyConfigException failure = assertThrows(EasyConfigException.class, holder::load);

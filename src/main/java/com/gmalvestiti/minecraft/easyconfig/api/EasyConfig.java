@@ -13,7 +13,7 @@ import com.gmalvestiti.minecraft.easyconfig.exception.EasyConfigException;
  * returned {@link ConfigHolder} for the lifetime of your mod.
  *
  * <pre>{@code
- * @Config(name = "mymod")                      // -> config/mymod.json
+ * @Config(name = "mymod")                      // -> config/mymod.json5
  * public final class MyModConfig {
  *     public boolean showHints = true;
  * }

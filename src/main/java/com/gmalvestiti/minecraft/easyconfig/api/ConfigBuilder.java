@@ -45,7 +45,7 @@ import java.util.function.Supplier;
  *     .modId("mymod")
  *     .baseDir(Platform.getConfigDir().resolve("mymod"))
  *     .failurePolicy(FailurePolicy.STRICT)
- *     .onChange(state -> hudRenderer.setScale(state.hudScale))
+ *     .onUpdate(state -> hudRenderer.setScale(state.hudScale))
  *     .createAsync();
  * }</pre>
  *
@@ -61,7 +61,10 @@ import java.util.function.Supplier;
 public final class ConfigBuilder<T> {
 
     private final Class<T> type;
-    private final List<Consumer<T>> changeListeners = new ArrayList<>();
+    private final List<Consumer<T>> updateListeners = new ArrayList<>();
+    private final List<Consumer<T>> loadListeners = new ArrayList<>();
+    private final List<Consumer<T>> saveListeners = new ArrayList<>();
+    private final List<Consumer<T>> resetListeners = new ArrayList<>();
     private String modId;
     private Path baseDirectory;
     private FailurePolicy readFailurePolicy;
@@ -102,7 +105,7 @@ public final class ConfigBuilder<T> {
      * {@link #baseDir(Path)} when a {@link Path} is already in hand.
      *
      * <pre>{@code
-     * .baseDir("config/mymod")   // config/mymod/<@Config.path() dirs>/<@Config.name()>.json
+     * .baseDir("config/mymod")   // config/mymod/<@Config.path() dirs>/<@Config.name()>.json5
      * }</pre>
      *
      * @param baseDir the directory string; must not be {@code null} or blank
@@ -130,7 +133,7 @@ public final class ConfigBuilder<T> {
      *
      * <pre>{@code
      * // with @Config(name = "mymod")
-     * .baseDir(Platform.getConfigDir().resolve("mymod"))   // config/mymod/mymod.json
+     * .baseDir(Platform.getConfigDir().resolve("mymod"))   // config/mymod/mymod.json5
      * .baseDir(tempDir)                                    // isolated root, useful in tests
      * }</pre>
      *
@@ -151,42 +154,89 @@ public final class ConfigBuilder<T> {
     }
 
     /**
-     * Registers a listener notified whenever the published state changes.
+     * Registers a listener notified after an accepted {@link ConfigHolder#update} or
+     * {@link ConfigHolder#updateAndSave}.
      *
      * <pre>{@code
      * EasyConfig.holder(MyModConfig.class)
      *     .modId("mymod")
-     *     .onChange(config -> hudRenderer.setScale(config.hudScale))
-     *     .onChange(config -> LOGGER.info("config changed"))
+     *     .onUpdate(config -> hudRenderer.setScale(config.hudScale))
+     *     .onUpdate(config -> LOGGER.info("config updated"))
      *     .create();
      * }</pre>
      *
-     * <p>Listeners fire after an accepted update, an accepted reset, and a completed load — in
-     * registration order, and only once the change is visible through
-     * {@link ConfigHolder#data()}. A rejected update fires nothing, and neither does a load that
-     * fell back to defaults because the file could not be read. Neither does the load this
-     * builder performs while creating the holder: nothing has changed yet at that point, and no
-     * listener could be attached to a holder that does not exist.
-     *
-     * <p>The listener receives the published state, the same shared instance {@code data()}
-     * returns. Read it; do not mutate it, and do not keep the reference, because the next change
-     * publishes a different object. Call {@link ConfigHolder#copy()} if you need to hold on to
-     * values.
-     *
-     * <p>Listeners run on whichever thread performed the change, which for
-     * {@link #createAsync()} is the config worker. Never call a blocking
-     * holder method from inside one — that is reported as
-     * {@link ConfigError#BLOCKING_CALL_ON_CONFIG_THREAD}. A listener that throws is reported as
-     * {@link ConfigError#CHANGE_LISTENER_FAILED} and skipped, so it cannot fail the operation or
-     * stop the listeners after it.
+     * <p>Listeners run after the new state is already visible through
+     * {@link ConfigHolder#data()}, in registration order. A rejected update fires nothing.
+     * The same listener contract applies to all hooks — see {@link #onLoad} for the full rules.
      *
      * @param listener callback invoked with the new published state, or {@code null} to register
      *                 nothing
      * @return this builder
      */
-    public ConfigBuilder<T> onChange(Consumer<T> listener) {
+    public ConfigBuilder<T> onUpdate(Consumer<T> listener) {
         if (listener != null) {
-            changeListeners.add(listener);
+            updateListeners.add(listener);
+        }
+        return this;
+    }
+
+    /**
+     * Registers a listener notified after a successful {@link ConfigHolder#load}.
+     *
+     * <p>Does not fire on a load that fell back to defaults due to a read failure, or on the
+     * build-time load that {@link #create()} performs during construction.
+     *
+     * <p><b>Listener contract (applies to all hooks):</b>
+     * <ul>
+     *   <li>Receives the published state — the same instance {@code data()} returns at that
+     *       moment. Read it; do not mutate it; do not keep the reference. Call
+     *       {@link ConfigHolder#copy()} if you need to hold on to values.</li>
+     *   <li>Runs on the thread that performed the operation. For {@link #createAsync()} that is
+     *       the config worker — never call a blocking holder method from inside a listener on
+     *       that thread. Such a call is reported as {@link ConfigError#BLOCKING_CALL_ON_CONFIG_THREAD}.</li>
+     *   <li>A listener that throws is logged as {@link ConfigError#CHANGE_LISTENER_FAILED}
+     *       and skipped. It cannot fail the triggering operation or stop later listeners.</li>
+     * </ul>
+     *
+     * @param listener callback invoked with the loaded state, or {@code null} to register nothing
+     * @return this builder
+     */
+    public ConfigBuilder<T> onLoad(Consumer<T> listener) {
+        if (listener != null) {
+            loadListeners.add(listener);
+        }
+        return this;
+    }
+
+    /**
+     * Registers a listener notified after a successful {@link ConfigHolder#save},
+     * {@link ConfigHolder#updateAndSave}, or {@link ConfigHolder#resetAndSave}.
+     *
+     * <p>The same listener contract described on {@link #onLoad} applies here.
+     *
+     * @param listener callback invoked with the current state at save time, or {@code null} to
+     *                 register nothing
+     * @return this builder
+     */
+    public ConfigBuilder<T> onSave(Consumer<T> listener) {
+        if (listener != null) {
+            saveListeners.add(listener);
+        }
+        return this;
+    }
+
+    /**
+     * Registers a listener notified after an accepted {@link ConfigHolder#reset} or
+     * {@link ConfigHolder#resetAndSave}.
+     *
+     * <p>The same listener contract described on {@link #onLoad} applies here.
+     *
+     * @param listener callback invoked with the reset state, or {@code null} to register nothing
+     * @return this builder
+     */
+    public ConfigBuilder<T> onReset(Consumer<T> listener) {
+        if (listener != null) {
+            resetListeners.add(listener);
         }
         return this;
     }
@@ -276,7 +326,7 @@ public final class ConfigBuilder<T> {
      * <p>The right choice for single-threaded setups, tests, and mod initialization: no worker
      * thread is started, so nothing outlives the holder and failures surface on the exact stack
      * that caused them. If your config is read or written from more than one thread, use
-     * {@link #createAsync()} or {@link createImmutable()} instead.
+     * {@link #createAsync()} or {@link #createImmutable()} instead.
      *
      * <p>Building touches disk. It resolves file paths, rejects invalid config models, registers
      * extension validators, and validates defaults; then it reads what is on disk and writes the
@@ -351,7 +401,10 @@ public final class ConfigBuilder<T> {
             orElseGet(updateFailurePolicy, () -> FailurePolicy.FALLBACK),
             orElseGet(stateCloner, () -> new StateClonerImplementation<>(type)),
             orElseGet(implementation, () -> HolderImplementation.SIMPLE),
-            List.copyOf(changeListeners)
+            List.copyOf(updateListeners),
+            List.copyOf(loadListeners),
+            List.copyOf(saveListeners),
+            List.copyOf(resetListeners)
         );
     }
 

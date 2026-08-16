@@ -5,7 +5,7 @@ import com.gmalvestiti.minecraft.easyconfig.layout.ConfigLayout;
 import com.gmalvestiti.minecraft.easyconfig.reflection.ConfigFieldAccess;
 import com.gmalvestiti.minecraft.easyconfig.storage.ConfigStorage;
 import com.gmalvestiti.minecraft.easyconfig.async.ConfigExecutors;
-import com.gmalvestiti.minecraft.easyconfig.engine.ConfigChangeNotifier;
+import com.gmalvestiti.minecraft.easyconfig.engine.ConfigEventNotifier;
 import com.gmalvestiti.minecraft.easyconfig.engine.ConfigEngine;
 import com.gmalvestiti.minecraft.easyconfig.engine.ConfigLifecycleHooks;
 import com.gmalvestiti.minecraft.easyconfig.exception.ConfigScope;
@@ -57,8 +57,13 @@ public final class ConfigContextAssembler {
         ConfigRestartGuard<T> restartGuard =
             new ConfigRestartGuard<>(settings.type(), scope, fieldAccess);
 
-        ConfigChangeNotifier<T> changeNotifier =
-            new ConfigChangeNotifier<>(scope, settings.changeListeners());
+        ConfigEventNotifier<T> eventNotifier = new ConfigEventNotifier<>(
+            scope,
+            settings.updateListeners(),
+            settings.loadListeners(),
+            settings.saveListeners(),
+            settings.resetListeners()
+        );
 
         return new ConfigContext<>(
             settings.type(),
@@ -67,7 +72,7 @@ public final class ConfigContextAssembler {
             engine,
             validationRunner,
             restartGuard,
-            changeNotifier,
+            eventNotifier,
             settings.stateCloner(),
             exceptionHandler
         );

@@ -27,7 +27,7 @@ import java.lang.annotation.Target;
  * directories, {@link #name()} contributes only the file, {@link #format()} contributes the
  * extension, and {@code baseDir} is the platform config directory unless
  * {@code ConfigBuilder.baseDir(...)} overrides it. The example above resolves to
- * {@code config/mymod.json}.
+ * {@code config/mymod.json5}.
  *
  * <p>Name the file after your mod. The owning mod id is <em>not</em> part of the path, so a
  * generic {@code name} such as {@code "config"} or {@code "client"} in the shared config root
@@ -35,9 +35,9 @@ import java.lang.annotation.Target;
  * with {@code ConfigError.CONFLICTING_CONFIG_PATH}:
  *
  * <pre>{@code
- * @Config(name = "mymod")                     // config/mymod.json        — one file
- * @Config(name = "client", path = "mymod")    // config/mymod/client.json — several files
- * @Config(name = "client")                    // config/client.json       — avoid: not yours alone
+ * @Config(name = "mymod")                     // config/mymod.json5        — one file
+ * @Config(name = "client", path = "mymod")    // config/mymod/client.json5 — several files
+ * @Config(name = "client")                    // config/client.json5       — avoid: not yours alone
  * }</pre>
  */
 @Target(ElementType.TYPE)
@@ -52,12 +52,12 @@ public @interface Config {
      * The extension of the declared {@link #format()} is appended when missing, ignoring case:
      *
      * <pre>{@code
-     * name = "mymod"        -> mymod.json         // recommended for a single file
-     * name = "mymod.json"   -> mymod.json
-     * name = "client"       -> client.json        // only inside your own path, see path()
+     * name = "mymod"         -> mymod.json5        // recommended for a single file
+     * name = "mymod.json5"   -> mymod.json5
+     * name = "client"        -> client.json5       // only inside your own path, see path()
      * }</pre>
      *
-     * <p>Blank values, the bare extension {@code .json}, and values containing {@code /} or
+     * <p>Blank values, the bare extension {@code .json5}, and values containing {@code /} or
      * {@code \} are rejected with {@code ConfigError.INVALID_CONFIG_NAME}; put directories in
      * {@link #path()} instead.
      *
@@ -74,12 +74,12 @@ public @interface Config {
      * directories are created on the first save:
      *
      * <pre>{@code
-     * path = "",     name = "mymod"  -> config/mymod.json           // one file
-     * path = "mymod", name = "client" -> config/mymod/client.json   // several files
-     * path = "mymod/gui", name = "hud" -> config/mymod/gui/hud.json
+     * path = "",       name = "mymod"   -> config/mymod.json5            // one file
+     * path = "mymod",  name = "client"  -> config/mymod/client.json5    // several files
+     * path = "mymod/gui", name = "hud" -> config/mymod/gui/hud.json5
      *
-     * // Wrong: the file name belongs in name(), so this creates a directory called client.json
-     * path = "mymod/client.json" -> config/mymod/client.json/client.json
+     * // Wrong: the file name belongs in name(), so this creates a directory called client.json5
+     * path = "mymod/client.json5" -> config/mymod/client.json5/client.json5
      * }</pre>
      *
      * <p>Absolute paths, and relative ones that escape the config root once normalized, are
@@ -96,7 +96,7 @@ public @interface Config {
      * {@link ConfigFormat#TOML} writes TOML instead. The config class itself does not change:
      *
      * <pre>{@code
-     * @Config(name = "mymod")                              // config/mymod.json
+     * @Config(name = "mymod")                              // config/mymod.json5
      * @Config(name = "mymod", format = ConfigFormat.TOML)  // config/mymod.toml
      * }</pre>
      *

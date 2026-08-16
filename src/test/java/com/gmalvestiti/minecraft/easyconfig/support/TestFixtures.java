@@ -4,6 +4,7 @@ import com.gmalvestiti.minecraft.easyconfig.api.ConfigFormat;
 import com.gmalvestiti.minecraft.easyconfig.api.annotations.Config;
 import com.gmalvestiti.minecraft.easyconfig.api.annotations.ConfigEntry;
 import com.gmalvestiti.minecraft.easyconfig.api.annotations.ConfigGroup;
+import com.gmalvestiti.minecraft.easyconfig.api.annotations.ConfigIgnore;
 import com.gmalvestiti.minecraft.easyconfig.api.FailurePolicy;
 import com.gmalvestiti.minecraft.easyconfig.api.ConfigExtension;
 import com.gmalvestiti.minecraft.easyconfig.exception.ConfigExceptionHandler;
@@ -351,5 +352,26 @@ public final class TestFixtures {
      * would otherwise refuse to construct — a blank id, for instance.
      */
     public record UncheckedViolation(String id, String message) implements Violation {
+    }
+
+    /**
+     * A field tagged {@link ConfigIgnore} must not appear in the file or be read back.
+     */
+    @Config(name = "ignored-field")
+    public static class IgnoredFieldConfig {
+        public int persisted = 5;
+
+        @ConfigIgnore
+        public int ignored = 99;
+    }
+
+    /** {@link ConfigIgnore} must suppress the field even when {@link ConfigEntry} also annotates it. */
+    @Config(name = "ignored-with-entry")
+    public static class IgnoredWithEntryConfig {
+        public int persisted = 5;
+
+        @ConfigIgnore
+        @ConfigEntry(comment = "This comment must never reach the file.")
+        public int ignored = 99;
     }
 }

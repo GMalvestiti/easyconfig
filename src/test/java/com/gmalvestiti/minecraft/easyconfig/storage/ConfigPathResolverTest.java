@@ -29,11 +29,11 @@ class ConfigPathResolverTest {
     static class EscapePathConfig {
     }
 
-    @Config(name = "already.json")
+    @Config(name = "already.json5")
     static class JsonSuffixConfig {
     }
 
-    @Config(name = ".json")
+    @Config(name = ".json5")
     static class DotJsonNameConfig {
     }
 
@@ -61,8 +61,8 @@ class ConfigPathResolverTest {
         Path jsonSuffix = resolver.resolveForConfig(JsonSuffixConfig.class);
 
         assertEquals(first, second);
-        assertTrue(first.toString().endsWith("nested" + java.io.File.separator + "named.json"));
-        assertTrue(jsonSuffix.toString().endsWith("already.json"));
+        assertTrue(first.toString().endsWith("nested" + java.io.File.separator + "named.json5"));
+        assertTrue(jsonSuffix.toString().endsWith("already.json5"));
     }
 
     @Test

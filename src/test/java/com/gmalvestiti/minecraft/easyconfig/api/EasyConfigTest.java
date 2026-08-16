@@ -154,7 +154,7 @@ class EasyConfigTest {
             .baseDir(tempDir.toString())
             .create();
         holder.save();
-        Files.writeString(tempDir.resolve("with-extension.json"), "{\"value\":-5}");
+        Files.writeString(tempDir.resolve("with-extension.json5"), "{\"value\":-5}");
 
         holder.load();
 
@@ -169,7 +169,7 @@ class EasyConfigTest {
             .readFailurePolicy(FailurePolicy.STRICT)
             .create();
         holder.save();
-        Files.writeString(tempDir.resolve("with-extension.json"), "{\"value\":-5}");
+        Files.writeString(tempDir.resolve("with-extension.json5"), "{\"value\":-5}");
 
         EasyConfigException failure = assertThrows(EasyConfigException.class, holder::load);
         assertEquals(ConfigError.VALIDATION_FAILED, failure.error());

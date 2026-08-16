@@ -2,6 +2,7 @@ package com.gmalvestiti.minecraft.easyconfig.storage.codec;
 
 import com.gmalvestiti.minecraft.easyconfig.api.annotations.Config;
 import com.gmalvestiti.minecraft.easyconfig.api.annotations.ConfigEntry;
+import com.gmalvestiti.minecraft.easyconfig.api.annotations.ConfigIgnore;
 import com.gmalvestiti.minecraft.easyconfig.storage.ConfigBinder;
 
 import java.lang.reflect.Field;
@@ -66,7 +67,7 @@ final class ConfigProperties {
         List<String> lines = new ArrayList<>();
         for (String block : declared) {
             for (String line : block.split("\\R", -1)) {
-                lines.add(line.strip());
+                lines.add(line);
             }
         }
         return lines.isEmpty() ? null : String.join("\n", lines);
@@ -74,6 +75,9 @@ final class ConfigProperties {
 
     private static boolean isPersisted(Field field) {
         int modifiers = field.getModifiers();
-        return !Modifier.isStatic(modifiers) && !Modifier.isTransient(modifiers) && !field.isSynthetic();
+        return !Modifier.isStatic(modifiers)
+            && !Modifier.isTransient(modifiers)
+            && !field.isSynthetic()
+            && field.getAnnotation(ConfigIgnore.class) == null;
     }
 }

@@ -29,7 +29,7 @@ class ImmutableConfigHolderTest {
 
     @Test
     void testLoadsOnceWhileBuilding(@TempDir Path tempDir) throws Exception {
-        Files.writeString(tempDir.resolve("with-extension.json"), "{\"value\":4}");
+        Files.writeString(tempDir.resolve("with-extension.json5"), "{\"value\":4}");
 
         ConfigHolder<TestFixtures.ConfigWithExtension> holder = holder(tempDir, FailurePolicy.FALLBACK);
 
@@ -46,7 +46,7 @@ class ImmutableConfigHolderTest {
 
     @Test
     void testFallsBackAndBacksUpMalformedDataDuringInitialLoad(@TempDir Path tempDir) throws Exception {
-        Path file = tempDir.resolve("with-extension.json");
+        Path file = tempDir.resolve("with-extension.json5");
         Files.writeString(file, "{");
 
         ConfigHolder<TestFixtures.ConfigWithExtension> holder = holder(tempDir, FailurePolicy.FALLBACK);
@@ -61,7 +61,7 @@ class ImmutableConfigHolderTest {
 
     @Test
     void testThrowsWithoutBackingUpMalformedDataDuringInitialStrictLoad(@TempDir Path tempDir) throws Exception {
-        Path file = tempDir.resolve("with-extension.json");
+        Path file = tempDir.resolve("with-extension.json5");
         Files.writeString(file, "{");
 
         EasyConfigException failure = assertThrows(EasyConfigException.class, () -> strictHolder(tempDir));
@@ -75,7 +75,7 @@ class ImmutableConfigHolderTest {
 
     @Test
     void testRestoresDefaultsWhenTheLoadedFileFailsValidation(@TempDir Path tempDir) throws Exception {
-        Path file = tempDir.resolve("with-extension.json");
+        Path file = tempDir.resolve("with-extension.json5");
         Files.writeString(file, "{\"value\":-5}");
 
         ConfigHolder<TestFixtures.ConfigWithExtension> holder = holder(tempDir, FailurePolicy.FALLBACK);
@@ -91,7 +91,7 @@ class ImmutableConfigHolderTest {
 
     @Test
     void testPropagatesDefectsFromTheInitialLoadEvenUnderFallback(@TempDir Path tempDir) throws Exception {
-        Files.writeString(tempDir.resolve("throwing-validator.json"), "{\"value\":-1}");
+        Files.writeString(tempDir.resolve("throwing-validator.json5"), "{\"value\":-1}");
 
         EasyConfigException failure = assertThrows(EasyConfigException.class, () -> EasyConfig
             .holder(TestFixtures.ThrowingValidatorConfig.class)
@@ -170,7 +170,7 @@ class ImmutableConfigHolderTest {
 
         holder.save();
 
-        assertTrue(Files.exists(tempDir.resolve("with-extension.json")));
+        assertTrue(Files.exists(tempDir.resolve("with-extension.json5")));
     }
 
     private static ConfigHolder<TestFixtures.ConfigWithExtension> strictHolder(Path tempDir) {

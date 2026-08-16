@@ -80,7 +80,7 @@ class ConfigContextAssemblerTest {
             policy,
             new StateClonerImplementation<>(type),
             HolderImplementation.ASYNC,
-            List.of()
+            List.of(), List.of(), List.of(), List.of()
         );
     }
 }

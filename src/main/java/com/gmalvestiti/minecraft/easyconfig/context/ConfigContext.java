@@ -1,7 +1,7 @@
 package com.gmalvestiti.minecraft.easyconfig.context;
 
 import com.gmalvestiti.minecraft.easyconfig.exception.ConfigExceptionHandler;
-import com.gmalvestiti.minecraft.easyconfig.engine.ConfigChangeNotifier;
+import com.gmalvestiti.minecraft.easyconfig.engine.ConfigEventNotifier;
 import com.gmalvestiti.minecraft.easyconfig.engine.ConfigEngine;
 import com.gmalvestiti.minecraft.easyconfig.api.spi.StateCloner;
 import com.gmalvestiti.minecraft.easyconfig.validation.ConfigValidationRunner;
@@ -17,7 +17,7 @@ public record ConfigContext<T>(
     ConfigEngine<T> engine,
     ConfigValidationRunner<T> validationRunner,
     ConfigRestartGuard<T> restartGuard,
-    ConfigChangeNotifier<T> changeNotifier,
+    ConfigEventNotifier<T> eventNotifier,
     StateCloner<T> stateCloner,
     ConfigExceptionHandler exceptionHandler
 ) {

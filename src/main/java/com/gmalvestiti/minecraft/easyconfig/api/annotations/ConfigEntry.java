@@ -2,7 +2,6 @@ package com.gmalvestiti.minecraft.easyconfig.api.annotations;
 
 import com.gmalvestiti.minecraft.easyconfig.api.ConfigHolder;
 import com.gmalvestiti.minecraft.easyconfig.api.UpdateResult;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -41,9 +40,10 @@ import java.lang.annotation.Target;
  * }
  * }</pre>
  *
- * <p>The same annotation drives every format, so a config class annotated once reads and writes
- * identically as JSON and as TOML. To comment the class itself rather than a field, use
- * {@link Config#comment()}.
+ * <p>To exclude a field from the file entirely, use {@link ConfigIgnore} instead of this
+ * annotation. The same annotation drives every format, so a config class annotated once reads
+ * and writes identically as JSON5 and as TOML. To comment the class itself rather than a field,
+ * use {@link Config#comment()}.
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)

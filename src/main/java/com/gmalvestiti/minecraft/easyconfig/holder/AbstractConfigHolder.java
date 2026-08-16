@@ -53,7 +53,7 @@ abstract class AbstractConfigHolder<T> implements ConfigHolder<T> {
             stateManager.replaceState(outcome.valueOr(context.engine()::initialize));
 
             if (outcome.completed()) {
-                notifyChanged();
+                context.eventNotifier().notifyLoaded(stateManager.published());
                 logCompleted(ConfigOperation.LOAD);
             }
         } catch (EasyConfigException failure) {
@@ -65,20 +65,28 @@ abstract class AbstractConfigHolder<T> implements ConfigHolder<T> {
     }
 
     protected final UpdateResult performUpdate(Consumer<T> mutator) {
-        return attempt(() -> {
+        UpdateResult result = attempt(() -> {
             Objects.requireNonNull(mutator, "mutator");
             T candidate = stateManager.copyOfCanonical();
             mutator.accept(candidate);
             return candidate;
         });
+        if (result.accepted()) {
+            context.eventNotifier().notifyUpdated(stateManager.published());
+        }
+        return result;
     }
 
     protected final UpdateResult performReset() {
-        return attempt(() -> {
+        UpdateResult result = attempt(() -> {
             T defaults = context.engine().initialize();
             context.restartGuard().carryOver(stateManager.canonical(), defaults);
             return defaults;
         });
+        if (result.accepted()) {
+            context.eventNotifier().notifyReset(stateManager.published());
+        }
+        return result;
     }
 
     protected final UpdateResult performResetAndSave() {
@@ -100,6 +108,7 @@ abstract class AbstractConfigHolder<T> implements ConfigHolder<T> {
     protected final void performSave() {
         if (exceptionHandler().onWrite(() -> context.engine().save(stateManager.canonical())).completed()) {
             logCompleted(ConfigOperation.SAVE);
+            context.eventNotifier().notifySaved(stateManager.published());
         }
     }
 
@@ -116,12 +125,39 @@ abstract class AbstractConfigHolder<T> implements ConfigHolder<T> {
             return UpdateResult.rejected(outcome.violations());
         }
 
-        notifyChanged();
         return UpdateResult.published();
     }
 
-    private void notifyChanged() {
-        context.changeNotifier().published(stateManager.published());
+    @Override
+    public final ConfigHolder<T> onUpdate(Consumer<T> listener) {
+        if (listener != null) {
+            context.eventNotifier().addUpdateListener(listener);
+        }
+        return this;
+    }
+
+    @Override
+    public final ConfigHolder<T> onLoad(Consumer<T> listener) {
+        if (listener != null) {
+            context.eventNotifier().addLoadListener(listener);
+        }
+        return this;
+    }
+
+    @Override
+    public final ConfigHolder<T> onSave(Consumer<T> listener) {
+        if (listener != null) {
+            context.eventNotifier().addSaveListener(listener);
+        }
+        return this;
+    }
+
+    @Override
+    public final ConfigHolder<T> onReset(Consumer<T> listener) {
+        if (listener != null) {
+            context.eventNotifier().addResetListener(listener);
+        }
+        return this;
     }
 
     private void logCompleted(ConfigOperation operation) {
