@@ -24,14 +24,14 @@ dev.snapshot=false
 dev.username="Riser876"
 dev.uuid="13957e2e-2731-4479-8a6d-d42f89f8d756"
 
-publish.type="beta"
+publish.type="stable"
 publish.modrinth_id="easyconfig"
 publish.modrinth_changelog="1.21"
 publish.curseforge_id="1646424"
 publish.curseforge_slug="easyconfig"
 publish.curseforge_client=true
 publish.curseforge_server=true
-publish.dry_run=true
+publish.dry_run=false
 
 
 ["1.21"]

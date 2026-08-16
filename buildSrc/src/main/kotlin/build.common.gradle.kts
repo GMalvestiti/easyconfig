@@ -21,6 +21,10 @@ repositories {
 
     mavenLocal()
     mavenCentral()
+    maven {
+        name = "SonatypeSnapshots"
+        url = uri("https://central.sonatype.com/repository/maven-snapshots/")
+    }
     strictMaven("https://www.cursemaven.com", "CurseForge", "curse.maven")
     strictMaven("https://api.modrinth.com/maven", "Modrinth", "maven.modrinth")
 }
@@ -243,8 +247,8 @@ afterEvaluate {
                 url = uri(if (prop("dev.snapshot").toBoolean()) snapshotsRepoUrl else releasesRepoUrl)
 
                 credentials {
-                    username = project.findProperty("mavenCentralUsername")?.toString()
-                    password = project.findProperty("mavenCentralPassword")?.toString()
+                    username = providers.gradleProperty("mavenCentralUsername").orNull
+                    password = providers.gradleProperty("mavenCentralPassword").orNull
                 }
             }
         }
