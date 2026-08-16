@@ -188,5 +188,5 @@ That writes `config/mymod.json5`:
 }
 ```
 
-## Documentation: [Wiki](https://github.com/gmalvestiti/easyconfig/wiki)
+**Documentation:** [Wiki](https://github.com/gmalvestiti/easyconfig/wiki)
 
