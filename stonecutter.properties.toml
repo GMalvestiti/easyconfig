@@ -20,7 +20,7 @@ mod.license="MIT"
 
 dev.debug=false
 dev.javadoc=true
-dev.snapshot=false
+dev.snapshot=true
 dev.username="Riser876"
 dev.uuid="13957e2e-2731-4479-8a6d-d42f89f8d756"
 
@@ -37,7 +37,7 @@ publish.dry_run=false
 
 ["1.21"]
 
-mod.version="1.0.0"
+mod.version="1.0.1"
 publish.start="1.21"
 publish.end="1.21.11"
 
@@ -52,7 +52,7 @@ deps.neoforge_loader="21.0.167"
 
 ["26.1"]
 
-mod.version="2.0.0"
+mod.version="2.0.1"
 publish.start="26.1"
 publish.end="latest"
 
