@@ -25,10 +25,10 @@ dev.username="Riser876"
 dev.uuid="13957e2e-2731-4479-8a6d-d42f89f8d756"
 
 publish.type="stable"
-publish.modrinth_id="easyconfig"
+publish.modrinth_id="easyconfiglib"
 publish.modrinth_changelog="1.21"
 publish.curseforge_id="1646424"
-publish.curseforge_slug="easyconfig"
+publish.curseforge_slug="easyconfiglib"
 publish.curseforge_client=true
 publish.curseforge_server=true
 publish.auto_release=false

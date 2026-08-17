@@ -12,8 +12,6 @@ public final class AsyncConfigStateManager<T> implements ConfigStateManager<T> {
 
     public AsyncConfigStateManager(StateCloner<T> cloner, T initialCanonical) {
         this.cloner = cloner;
-        // Guarded here rather than downstream: a null seed clones to null and only
-        // surfaces much later, as a null from data().
         this.canonical = Objects.requireNonNull(initialCanonical, "initialCanonical");
         this.published = cloner.copy(initialCanonical);
     }

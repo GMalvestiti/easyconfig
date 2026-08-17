@@ -113,7 +113,7 @@ tasks {
 
     withType<Javadoc>().configureEach {
 
-        exclude("**/*")
+        include("**/api/*", "**/exception/*")
 
         (options as StandardJavadocDocletOptions).apply {
             encoding = "UTF-8"

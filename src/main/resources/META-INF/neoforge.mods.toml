@@ -10,6 +10,7 @@ version="${version}"
 authors="${author}"
 description="${description}"
 
+iconFile="assets/${id}/icon.png"
 logoFile="assets/${id}/icon.png"
 displayURL="${contact_homepage}"
 issueTrackerUrl="${contact_issues}"
