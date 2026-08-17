@@ -11,7 +11,7 @@ deps.nightconfig="3.9.0"
 deps.junit="6.1.2"
 deps.mockito="5.23.0"
 
-mod.description="A minecraft configuration library"
+mod.description="A minecraft JSON5/TOML configuration library"
 mod.author="GMalvestiti"
 mod.contact_homepage="https://modrinth.com/user/Riser876"
 mod.contact_sources="https://github.com/GMalvestiti/easyconfig"
